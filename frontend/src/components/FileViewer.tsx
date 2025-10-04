@@ -55,49 +55,27 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
       return;
     }
 
-    const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    console.log('setupHeaderTracking: found', headings.length, 'headings');
-
-    if (headings.length === 0) return;
-
     const updateCurrentHeading = () => {
-      console.log('=== updateCurrentHeading called ===');
-      console.log('contentArea exists:', !!contentArea);
-      console.log('contentArea.isConnected:', contentArea.isConnected);
-
       const contentAreaRect = contentArea.getBoundingClientRect();
-      console.log('contentAreaRect:', contentAreaRect);
-
       const headingsAbove: Element[] = [];
 
       // Re-query headings to ensure we have current DOM elements
       const currentHeadings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      console.log('Current headings in DOM:', currentHeadings.length);
 
       currentHeadings.forEach((heading) => {
         const rect = heading.getBoundingClientRect();
         const isAbove = rect.top < contentAreaRect.top + 20;
-
-        console.log(heading.textContent?.substring(0, 20), {
-          rect,
-          isAbove,
-          isConnected: heading.isConnected
-        });
 
         if (isAbove) {
           headingsAbove.push(heading);
         }
       });
 
-      console.log('Headings above viewport:', headingsAbove.length, headingsAbove.map(h => h.textContent?.substring(0, 30)));
-
       const lastHeadingAbove = headingsAbove[headingsAbove.length - 1];
 
       if (lastHeadingAbove) {
-        console.log('Setting active heading to:', lastHeadingAbove.textContent?.substring(0, 30));
         setCurrentHeading(lastHeadingAbove.textContent || '');
       } else {
-        console.log('No heading above, clearing active heading');
         setCurrentHeading('');
       }
     };
