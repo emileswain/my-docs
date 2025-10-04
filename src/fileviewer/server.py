@@ -223,11 +223,16 @@ def main():
     # Find free port
     port = find_free_port()
 
+    # Check if running in production mode
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    debug_mode = not is_production
+
     print(f"Starting File Viewer on http://localhost:{port}")
+    print(f"Mode: {'Production' if is_production else 'Development'}")
     print(f"Watching {len(pm.get_all_projects())} projects")
 
     try:
-        app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)
+        app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=debug_mode)
     finally:
         # Stop all watchers
         for watcher in app.config['watchers'].values():

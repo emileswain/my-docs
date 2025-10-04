@@ -60,9 +60,17 @@
         <div id="leftPanel" class="bg-white border-r border-gray-200 panel" style="min-width: 200px; width: 300px;">
             <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-gray-50">
                 <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Files</h2>
-                <button id="toggleLeftBtn" class="p-1 text-gray-500 hover:text-gray-700" title="Hide Panel">
-                    <i class="fas fa-chevron-left text-xs"></i>
-                </button>
+                <div class="flex space-x-1">
+                    <button id="expandAllFoldersBtn" class="p-1 text-gray-500 hover:text-gray-700" title="Expand All Folders">
+                        <i class="fas fa-plus-circle text-xs"></i>
+                    </button>
+                    <button id="collapseAllFoldersBtn" class="p-1 text-gray-500 hover:text-gray-700" title="Collapse All Folders">
+                        <i class="fas fa-minus-circle text-xs"></i>
+                    </button>
+                    <button id="toggleLeftBtn" class="p-1 text-gray-500 hover:text-gray-700" title="Hide Panel">
+                        <i class="fas fa-chevron-left text-xs"></i>
+                    </button>
+                </div>
             </div>
             <div id="fileTree" class="text-sm p-4">
                 <p class="text-gray-400 italic text-sm">Select a project to browse</p>

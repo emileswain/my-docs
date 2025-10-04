@@ -55,9 +55,13 @@ function setupEventListeners() {
         toggleProjectDropdown();
     });
 
-    // Expand/collapse all
+    // Expand/collapse all (structure tree)
     document.getElementById('expandAllBtn').addEventListener('click', () => changeDepth(10));
     document.getElementById('collapseAllBtn').addEventListener('click', () => changeDepth(1));
+
+    // Expand/collapse all (file folders)
+    document.getElementById('expandAllFoldersBtn').addEventListener('click', () => expandAllFolders());
+    document.getElementById('collapseAllFoldersBtn').addEventListener('click', () => collapseAllFolders());
 
     // Panel toggles
     document.getElementById('toggleLeftBtn').addEventListener('click', () => togglePanel('left', false));
@@ -199,6 +203,21 @@ async function loadProjectContents(project) {
     }
 }
 
+// Get list of open folders from localStorage
+function getOpenFolders() {
+    if (!currentProject) return [];
+    const key = `openFolders_${currentProject.id}`;
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : [];
+}
+
+// Save list of open folders to localStorage
+function saveOpenFolders(openFolders) {
+    if (!currentProject) return;
+    const key = `openFolders_${currentProject.id}`;
+    localStorage.setItem(key, JSON.stringify(openFolders));
+}
+
 // Render file tree
 function renderFileTree(items) {
     const tree = document.getElementById('fileTree');
@@ -208,13 +227,19 @@ function renderFileTree(items) {
         return;
     }
 
+    const openFolders = getOpenFolders();
+
     const html = items.map(item => {
         if (item.type === 'folder') {
+            const isOpen = openFolders.includes(item.path);
+            const folderIcon = isOpen ? 'fa-folder-open' : 'fa-folder';
+            const childrenClass = isOpen ? '' : 'hidden';
+
             return `
-                <div class="tree-item py-1 px-2 rounded" onclick="toggleFolder(this, '${item.path.replace(/'/g, "\\'")}')">
-                    <i class="fas fa-folder text-blue-500 mr-2"></i>
+                <div class="tree-item py-1 px-2 rounded" data-path="${item.path.replace(/"/g, '&quot;')}" onclick="toggleFolder(this, '${item.path.replace(/'/g, "\\'")}')">
+                    <i class="fas ${folderIcon} text-blue-500 mr-2"></i>
                     <span>${item.name}</span>
-                    <div class="tree-children hidden"></div>
+                    <div class="tree-children ${childrenClass}"></div>
                 </div>
             `;
         } else {
@@ -229,6 +254,9 @@ function renderFileTree(items) {
     }).join('');
 
     tree.innerHTML = html;
+
+    // Load content for open folders
+    setTimeout(() => loadOpenFolderContents(), 100);
 }
 
 // Get file icon
@@ -253,58 +281,155 @@ async function toggleFolder(element, path) {
         return;
     }
 
-    if (childrenDiv.classList.contains('hidden')) {
-        // Expand
+    const openFolders = getOpenFolders();
+    const isOpen = !childrenDiv.classList.contains('hidden');
+
+    if (!isOpen) {
+        // Opening folder
         if (childrenDiv.innerHTML === '') {
-            // Load contents - need to get relative path from project root
-            try {
-                // Calculate relative path from project root
-                const relativePath = path.startsWith(currentProject.path)
-                    ? path.substring(currentProject.path.length).replace(/^\/+/, '')
-                    : '';
-
-                const url = relativePath
-                    ? `/api/projects/${currentProject.id}/browse/${relativePath}`
-                    : `/api/projects/${currentProject.id}/browse`;
-
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (response.ok) {
-                    const html = data.items.map(item => {
-                        if (item.type === 'folder') {
-                            return `
-                                <div class="tree-item py-1 px-2 rounded" onclick="toggleFolder(this, '${item.path.replace(/'/g, "\\'")}')">
-                                    <i class="fas fa-folder text-blue-500 mr-2"></i>
-                                    <span>${item.name}</span>
-                                    <div class="tree-children hidden"></div>
-                                </div>
-                            `;
-                        } else {
-                            const iconClass = getFileIcon(item.extension);
-                            return `
-                                <div class="tree-item py-1 px-2 rounded" onclick="selectFile('${item.path.replace(/'/g, "\\'")}', '${item.name.replace(/'/g, "\\'")}')">
-                                    <i class="fas ${iconClass} text-gray-500 mr-2"></i>
-                                    <span>${item.name}</span>
-                                </div>
-                            `;
-                        }
-                    }).join('');
-                    childrenDiv.innerHTML = html;
-                }
-            } catch (error) {
-                console.error('Error loading folder:', error);
-            }
+            await loadFolderContent(path, childrenDiv);
         }
         childrenDiv.classList.remove('hidden');
         icon.classList.remove('fa-folder');
         icon.classList.add('fa-folder-open');
+
+        // Add to open folders list
+        if (!openFolders.includes(path)) {
+            openFolders.push(path);
+            saveOpenFolders(openFolders);
+        }
     } else {
-        // Collapse
+        // Closing folder
         childrenDiv.classList.add('hidden');
         icon.classList.remove('fa-folder-open');
         icon.classList.add('fa-folder');
+
+        // Remove from open folders list
+        const index = openFolders.indexOf(path);
+        if (index > -1) {
+            openFolders.splice(index, 1);
+            saveOpenFolders(openFolders);
+        }
     }
+}
+
+// Load folder content
+async function loadFolderContent(path, childrenDiv) {
+    if (!currentProject) return;
+
+    try {
+        const relativePath = path.startsWith(currentProject.path)
+            ? path.substring(currentProject.path.length).replace(/^\/+/, '')
+            : '';
+
+        const url = relativePath
+            ? `/api/projects/${currentProject.id}/browse/${relativePath}`
+            : `/api/projects/${currentProject.id}/browse`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (response.ok) {
+            const openFolders = getOpenFolders();
+
+            const html = data.items.map(item => {
+                if (item.type === 'folder') {
+                    const isOpen = openFolders.includes(item.path);
+                    const folderIcon = isOpen ? 'fa-folder-open' : 'fa-folder';
+                    const childrenClass = isOpen ? '' : 'hidden';
+
+                    return `
+                        <div class="tree-item py-1 px-2 rounded" data-path="${item.path.replace(/"/g, '&quot;')}" onclick="toggleFolder(this, '${item.path.replace(/'/g, "\\'")}')">
+                            <i class="fas ${folderIcon} text-blue-500 mr-2"></i>
+                            <span>${item.name}</span>
+                            <div class="tree-children ${childrenClass}"></div>
+                        </div>
+                    `;
+                } else {
+                    const iconClass = getFileIcon(item.extension);
+                    return `
+                        <div class="tree-item py-1 px-2 rounded" onclick="selectFile('${item.path.replace(/'/g, "\\'")}', '${item.name.replace(/'/g, "\\'")}')">
+                            <i class="fas ${iconClass} text-gray-500 mr-2"></i>
+                            <span>${item.name}</span>
+                        </div>
+                    `;
+                }
+            }).join('');
+            childrenDiv.innerHTML = html;
+
+            // Load content for any nested open folders
+            setTimeout(() => loadOpenFolderContents(), 100);
+        }
+    } catch (error) {
+        console.error('Error loading folder:', error);
+    }
+}
+
+// Load content for all open folders
+async function loadOpenFolderContents() {
+    if (!currentProject) return;
+
+    const openFolders = getOpenFolders();
+
+    for (const folderPath of openFolders) {
+        const folderElement = document.querySelector(`#fileTree [data-path="${folderPath.replace(/"/g, '&quot;')}"]`);
+        if (folderElement) {
+            const childrenDiv = folderElement.querySelector('.tree-children');
+            if (childrenDiv && childrenDiv.innerHTML === '') {
+                await loadFolderContent(folderPath, childrenDiv);
+                await new Promise(resolve => setTimeout(resolve, 30));
+            }
+        }
+    }
+}
+
+// Get all folder paths in the tree recursively
+async function getAllFolderPaths() {
+    if (!currentProject) return [];
+
+    const allPaths = [];
+
+    async function collectPaths(path = '') {
+        const relativePath = path.startsWith(currentProject.path)
+            ? path.substring(currentProject.path.length).replace(/^\/+/, '')
+            : '';
+
+        const url = relativePath
+            ? `/api/projects/${currentProject.id}/browse/${relativePath}`
+            : `/api/projects/${currentProject.id}/browse`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (response.ok) {
+                for (const item of data.items) {
+                    if (item.type === 'folder') {
+                        allPaths.push(item.path);
+                        await collectPaths(item.path);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error collecting folder paths:', error);
+        }
+    }
+
+    await collectPaths(currentProject.path);
+    return allPaths;
+}
+
+// Expand all folders
+async function expandAllFolders() {
+    const allPaths = await getAllFolderPaths();
+    saveOpenFolders(allPaths);
+    await loadProjectContents(currentProject);
+}
+
+// Collapse all folders
+function collapseAllFolders() {
+    saveOpenFolders([]);
+    loadProjectContents(currentProject);
 }
 
 // Select file
