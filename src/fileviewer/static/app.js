@@ -59,9 +59,39 @@ function setupEventListeners() {
     document.getElementById('expandAllBtn').addEventListener('click', () => changeDepth(10));
     document.getElementById('collapseAllBtn').addEventListener('click', () => changeDepth(1));
 
-    // Expand/collapse all (file folders)
-    document.getElementById('expandAllFoldersBtn').addEventListener('click', () => expandAllFolders());
-    document.getElementById('collapseAllFoldersBtn').addEventListener('click', () => collapseAllFolders());
+    // Toggle expand/collapse all (file folders)
+    let allExpanded = false;
+    document.getElementById('toggleExpandBtn').addEventListener('click', async () => {
+        if (allExpanded) {
+            await collapseAllFolders();
+            allExpanded = false;
+        } else {
+            await expandAllFolders();
+            allExpanded = true;
+        }
+    });
+
+    // File filter
+    const fileFilterInput = document.getElementById('fileFilter');
+    const clearFilterBtn = document.getElementById('clearFilterBtn');
+
+    fileFilterInput.addEventListener('input', (e) => {
+        const value = e.target.value;
+        filterFiles(value);
+
+        // Show/hide clear button
+        if (value) {
+            clearFilterBtn.style.display = 'block';
+        } else {
+            clearFilterBtn.style.display = 'none';
+        }
+    });
+
+    clearFilterBtn.addEventListener('click', () => {
+        fileFilterInput.value = '';
+        clearFilterBtn.style.display = 'none';
+        filterFiles('');
+    });
 
     // Panel toggles
     document.getElementById('toggleLeftBtn').addEventListener('click', () => togglePanel('left', false));
@@ -430,6 +460,156 @@ async function expandAllFolders() {
 function collapseAllFolders() {
     saveOpenFolders([]);
     loadProjectContents(currentProject);
+}
+
+// Fuzzy match function
+function fuzzyMatch(str, pattern) {
+    if (!pattern) return true;
+
+    str = str.toLowerCase();
+    pattern = pattern.toLowerCase();
+
+    let patternIdx = 0;
+    let strIdx = 0;
+
+    while (strIdx < str.length && patternIdx < pattern.length) {
+        if (str[strIdx] === pattern[patternIdx]) {
+            patternIdx++;
+        }
+        strIdx++;
+    }
+
+    return patternIdx === pattern.length;
+}
+
+// Search entire project tree recursively
+async function searchProjectTree(searchTerm) {
+    if (!currentProject) return [];
+
+    const matches = [];
+
+    async function searchFolder(path = '') {
+        const relativePath = path.startsWith(currentProject.path)
+            ? path.substring(currentProject.path.length).replace(/^\/+/, '')
+            : '';
+
+        const url = relativePath
+            ? `/api/projects/${currentProject.id}/browse/${relativePath}`
+            : `/api/projects/${currentProject.id}/browse`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (response.ok) {
+                for (const item of data.items) {
+                    // Check if item matches
+                    if (fuzzyMatch(item.path, searchTerm) || fuzzyMatch(item.name, searchTerm)) {
+                        matches.push(item);
+
+                        // If it's a folder, also search inside it
+                        if (item.type === 'folder') {
+                            await searchFolder(item.path);
+                        }
+                    } else if (item.type === 'folder') {
+                        // Even if folder doesn't match, search inside it
+                        await searchFolder(item.path);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error searching folder:', error);
+        }
+    }
+
+    await searchFolder(currentProject.path);
+    return matches;
+}
+
+// Filter files and folders
+async function filterFiles(searchTerm) {
+    if (!searchTerm.trim()) {
+        // Restore original view
+        await loadProjectContents(currentProject);
+
+        // If there's a current file, expand folders to show it
+        if (currentFile) {
+            const pathParts = currentFile.split('/').filter(p => p);
+            const foldersToOpen = [];
+            let currentPath = '';
+
+            for (let i = 0; i < pathParts.length - 1; i++) {
+                currentPath += '/' + pathParts[i];
+                foldersToOpen.push(currentPath);
+            }
+
+            saveOpenFolders(foldersToOpen);
+            await loadProjectContents(currentProject);
+        }
+        return;
+    }
+
+    // Search entire tree
+    const matches = await searchProjectTree(searchTerm);
+
+    if (matches.length === 0) {
+        document.getElementById('fileTree').innerHTML = '<p class="text-gray-400 italic text-sm">No matches found</p>';
+        return;
+    }
+
+    // Get all unique parent folders for matches
+    const foldersToOpen = new Set();
+    matches.forEach(match => {
+        const pathParts = match.path.split('/').filter(p => p);
+        let currentPath = '';
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            currentPath += '/' + pathParts[i];
+            foldersToOpen.add(currentPath);
+        }
+    });
+
+    // Temporarily expand all folders needed to show matches
+    const originalOpenFolders = getOpenFolders();
+    saveOpenFolders(Array.from(foldersToOpen));
+
+    // Reload tree with expanded folders
+    await loadProjectContents(currentProject);
+
+    // Wait for DOM to update, then hide non-matching items
+    setTimeout(() => {
+        const matchPaths = new Set(matches.map(m => m.path));
+        const allItems = document.querySelectorAll('#fileTree .tree-item');
+
+        allItems.forEach(item => {
+            const path = item.getAttribute('data-path');
+            const isFile = !item.querySelector('.tree-children');
+
+            if (isFile) {
+                // For files, show only if it matches
+                const fileName = item.textContent.trim();
+                const matchesFilter = matchPaths.has(path) ||
+                                     fuzzyMatch(path || '', searchTerm) ||
+                                     fuzzyMatch(fileName, searchTerm);
+
+                if (!matchesFilter) {
+                    item.style.display = 'none';
+                } else {
+                    item.style.display = '';
+                }
+            } else {
+                // For folders, show if they contain matches
+                const hasVisibleChildren = item.querySelectorAll('.tree-item:not([style*="display: none"])').length > 0;
+                if (!hasVisibleChildren && !matchPaths.has(path)) {
+                    item.style.display = 'none';
+                } else {
+                    item.style.display = '';
+                }
+            }
+        });
+
+        // Restore original open folders state
+        saveOpenFolders(originalOpenFolders);
+    }, 200);
 }
 
 // Select file
