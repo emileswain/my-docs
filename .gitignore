@@ -49,3 +49,7 @@ package-lock.json
 
 # Compiled CSS
 src/fileviewer/static/output.css
+
+# React build output
+src/fileviewer/static/dist/
+frontend/dist/

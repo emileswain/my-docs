@@ -7,13 +7,15 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import markdown
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask_cors import CORS
 
 from .watcher import FolderWatcher
 from .file_parser import FileParser
 from .project import ProjectManager
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for development
 app.config['project_manager'] = None
 app.config['watchers'] = {}
 app.config['config_file'] = Path.home() / '.fileviewer' / 'projects.json'
@@ -36,6 +38,11 @@ def find_free_port(start_port: int = 6060, max_attempts: int = 100) -> int:
 @app.route('/')
 def index():
     """Serve the main page."""
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    if is_production:
+        dist_dir = Path(__file__).parent / 'static' / 'dist'
+        if dist_dir.exists():
+            return send_from_directory(dist_dir, 'index.html')
     return render_template('index.html')
 
 

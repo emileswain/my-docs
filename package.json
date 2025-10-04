@@ -9,6 +9,9 @@
   "scripts": {
     "build:css": "tailwindcss -i ./src/fileviewer/static/input.css -o ./src/fileviewer/static/output.css --minify",
     "watch:css": "tailwindcss -i ./src/fileviewer/static/input.css -o ./src/fileviewer/static/output.css --watch",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "FLASK_ENV=development uv run fileviewer",
+    "build": "cd frontend && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
