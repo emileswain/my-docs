@@ -6,7 +6,23 @@
     <title>File Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    typography: {
+                        DEFAULT: {
+                            css: {
+                                maxWidth: 'none',
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
+        @import url('https://unpkg.com/@tailwindcss/typography@0.5.10/dist/typography.css');
         body {
             margin: 0;
             padding: 0;

@@ -6,6 +6,7 @@ import socket
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import markdown
 from flask import Flask, jsonify, render_template, request
 
 from .watcher import FolderWatcher
@@ -157,7 +158,20 @@ def get_file_tree(file_path):
     try:
         parser = FileParser(file_path)
         tree = parser.parse()
-        return jsonify({'tree': tree, 'content': parser.get_raw_content()})
+        content = parser.get_raw_content()
+
+        # Convert markdown to HTML if it's a markdown file
+        html_content = None
+        if file_path.endswith('.md'):
+            md = markdown.Markdown(extensions=['fenced_code', 'tables', 'codehilite'])
+            html_content = md.convert(content)
+
+        return jsonify({
+            'tree': tree,
+            'content': content,
+            'html': html_content,
+            'type': Path(file_path).suffix.lower()
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

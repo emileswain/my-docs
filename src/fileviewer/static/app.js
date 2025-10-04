@@ -309,7 +309,7 @@ async function selectFile(path, name) {
         const data = await response.json();
 
         if (response.ok) {
-            renderFileContent(data.content, name, path);
+            renderFileContent(data, name, path);
             renderStructureTree(data.tree);
         } else {
             document.getElementById('contentArea').innerHTML = `<p class="text-red-500">${data.error}</p>`;
@@ -321,15 +321,24 @@ async function selectFile(path, name) {
 }
 
 // Render file content
-function renderFileContent(content, name, path) {
+function renderFileContent(data, name, path) {
     const contentArea = document.getElementById('contentArea');
     const extension = path.substring(path.lastIndexOf('.')).toLowerCase();
 
     let renderedContent = '';
-    if (extension === '.md') {
-        renderedContent = `<div class="prose max-w-none"><pre class="bg-gray-50 p-4 rounded overflow-x-auto"><code>${escapeHtml(content)}</code></pre></div>`;
+    if (extension === '.md' && data.html) {
+        // Render markdown as HTML
+        renderedContent = `<div class="prose prose-slate max-w-none">${data.html}</div>`;
+    } else if (extension === '.json') {
+        // Pretty print JSON
+        try {
+            const formatted = JSON.stringify(JSON.parse(data.content), null, 2);
+            renderedContent = `<pre class="bg-gray-50 p-4 rounded overflow-x-auto"><code class="language-json">${escapeHtml(formatted)}</code></pre>`;
+        } catch (e) {
+            renderedContent = `<pre class="bg-gray-50 p-4 rounded overflow-x-auto"><code>${escapeHtml(data.content)}</code></pre>`;
+        }
     } else {
-        renderedContent = `<pre class="bg-gray-50 p-4 rounded overflow-x-auto"><code>${escapeHtml(content)}</code></pre>`;
+        renderedContent = `<pre class="bg-gray-50 p-4 rounded overflow-x-auto"><code>${escapeHtml(data.content)}</code></pre>`;
     }
 
     contentArea.innerHTML = `
