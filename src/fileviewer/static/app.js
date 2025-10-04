@@ -686,7 +686,10 @@ function renderFileContent(data, name, path) {
 
     // Set up scroll tracking for markdown headers
     if (extension === '.md' && data.html && !showRaw) {
-        setTimeout(() => setupHeaderTracking(), 100);
+        setTimeout(() => {
+            setupHeaderTracking();
+            addCopyButtonsToCodeBlocks();
+        }, 100);
     }
 
     // Restore scroll position
@@ -859,4 +862,61 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Add copy buttons to all code blocks
+function addCopyButtonsToCodeBlocks() {
+    const markdownContent = document.getElementById('markdownContent');
+    if (!markdownContent) return;
+
+    // Find all pre elements (code blocks)
+    const codeBlocks = markdownContent.querySelectorAll('pre');
+
+    codeBlocks.forEach(pre => {
+        // Skip if already has a copy button
+        if (pre.parentElement.classList.contains('code-block-wrapper')) return;
+
+        // Create wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+
+        // Create copy button
+        const button = document.createElement('button');
+        button.className = 'copy-code-btn';
+        button.textContent = 'Copy';
+        button.onclick = function() {
+            copyCode(this);
+        };
+
+        // Wrap the pre element
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(button);
+        wrapper.appendChild(pre);
+    });
+}
+
+// Copy code to clipboard
+function copyCode(button) {
+    const wrapper = button.parentElement;
+    const pre = wrapper.querySelector('pre');
+    const code = pre.querySelector('code') || pre;
+
+    const text = code.textContent;
+
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.classList.add('copied');
+
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy code:', err);
+        button.textContent = 'Failed';
+        setTimeout(() => {
+            button.textContent = 'Copy';
+        }, 2000);
+    });
 }
