@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.tree-item {
+    cursor: pointer;
+    user-select: none;
+}
+
+.tree-item:hover {
+    background-color: #f3f4f6;
+}
+
+.tree-children {
+    margin-left: 1.5rem;
+}
+
+.main-content {
+    height: calc(100vh - 4rem);
+}
+
+.panel {
+    overflow-y: auto;
+}
+
+.sidebar {
+    width: 16rem;
+}
+
+.content-area {
+    flex: 1;
+    overflow-y: auto;
+}

@@ -201,13 +201,26 @@ async function toggleFolder(element, path) {
     const childrenDiv = element.querySelector('.tree-children');
     const icon = element.querySelector('i');
 
+    if (!currentProject) {
+        console.error('No current project selected');
+        return;
+    }
+
     if (childrenDiv.classList.contains('hidden')) {
         // Expand
         if (childrenDiv.innerHTML === '') {
-            // Load contents
+            // Load contents - need to get relative path from project root
             try {
-                const encodedPath = path.substring(1);
-                const response = await fetch(`/api/browse/${encodedPath}`);
+                // Calculate relative path from project root
+                const relativePath = path.startsWith(currentProject.path)
+                    ? path.substring(currentProject.path.length).replace(/^\/+/, '')
+                    : '';
+
+                const url = relativePath
+                    ? `/api/projects/${currentProject.id}/browse/${relativePath}`
+                    : `/api/projects/${currentProject.id}/browse`;
+
+                const response = await fetch(url);
                 const data = await response.json();
 
                 if (response.ok) {

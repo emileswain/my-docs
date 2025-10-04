@@ -185,7 +185,7 @@ def get_file_tree(file_path):
         # Convert markdown to HTML if it's a markdown file
         html_content = None
         if file_path.endswith('.md'):
-            md = markdown.Markdown(extensions=['fenced_code', 'tables', 'codehilite'])
+            md = markdown.Markdown(extensions=['fenced_code', 'tables'])
             html_content = md.convert(content)
 
         return jsonify({
