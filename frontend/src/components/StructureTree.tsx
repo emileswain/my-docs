@@ -1,4 +1,3 @@
-import { useRef, useEffect } from 'react';
 import type { TreeNode } from '../types';
 import { useStore } from '../store/useStore';
 
@@ -45,23 +44,22 @@ function StructureTreeNode({ node, depth, onSectionClick, currentHeading }: Stru
   );
 }
 
-export function StructureTree() {
+interface StructureTreeProps {
+  contentAreaRef: React.RefObject<HTMLDivElement | null>;
+}
+
+export function StructureTree({ contentAreaRef }: StructureTreeProps) {
   const currentFileContent = useStore((state) => state.currentFileContent);
   const currentHeading = useStore((state) => state.currentHeading);
   const rightPanelVisible = useStore((state) => state.rightPanelVisible);
   const setRightPanelVisible = useStore((state) => state.setRightPanelVisible);
-  const contentAreaRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    // Get reference to content area
-    contentAreaRef.current = document.querySelector('#contentArea') as HTMLDivElement;
-  }, []);
 
   const scrollToSection = (label: string) => {
     const contentArea = contentAreaRef.current;
-    const markdownContent = document.querySelector('#markdownContent');
+    if (!contentArea) return;
 
-    if (!contentArea || !markdownContent) return;
+    const markdownContent = contentArea.querySelector('#markdownContent');
+    if (!markdownContent) return;
 
     const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
 

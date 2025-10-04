@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileTree } from './FileTree';
 import { FileViewer } from './FileViewer';
@@ -10,6 +10,7 @@ import { loadOpenFoldersFromStorage } from '../store/useStore';
 export function Layout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const contentAreaRef = useRef<HTMLDivElement>(null);
 
   const projects = useStore((state) => state.projects);
   const currentProject = useStore((state) => state.currentProject);
@@ -178,8 +179,8 @@ export function Layout() {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         <FileTree onFileSelect={handleFileSelect} />
-        <FileViewer />
-        <StructureTree />
+        <FileViewer contentAreaRef={contentAreaRef} />
+        <StructureTree contentAreaRef={contentAreaRef} />
       </div>
     </div>
   );

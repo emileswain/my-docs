@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 
-export function FileViewer() {
+interface FileViewerProps {
+  contentAreaRef: React.RefObject<HTMLDivElement | null>;
+}
+
+export function FileViewer({ contentAreaRef }: FileViewerProps) {
   const currentFile = useStore((state) => state.currentFile);
   const currentFileName = useStore((state) => state.currentFileName);
   const currentFileContent = useStore((state) => state.currentFileContent);
@@ -9,7 +13,6 @@ export function FileViewer() {
   const setShowRaw = useStore((state) => state.setShowRaw);
   const setCurrentHeading = useStore((state) => state.setCurrentHeading);
   const currentHeading = useStore((state) => state.currentHeading);
-  const contentAreaRef = useRef<HTMLDivElement>(null);
   const scrollHandlerRef = useRef<(() => void) | null>(null);
 
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
@@ -43,12 +46,6 @@ export function FileViewer() {
     }
   }, [currentFile]);
 
-  const handleScroll = () => {
-    if (currentFile && contentAreaRef.current) {
-      localStorage.setItem('scrollPosition', String(contentAreaRef.current.scrollTop));
-    }
-  };
-
   const setupHeaderTracking = () => {
     const markdownContent = contentAreaRef.current?.querySelector('#markdownContent');
     if (!markdownContent || !contentAreaRef.current) return;
@@ -71,16 +68,24 @@ export function FileViewer() {
 
       Array.from(headings).forEach((heading) => {
         const headingRect = heading.getBoundingClientRect();
-        if (headingRect.top <= contentAreaTop + 20) {
+        if (headingRect.top <= contentAreaTop + 100) {
           current = heading as HTMLElement;
         }
       });
 
-      setCurrentHeading(current?.textContent ?? '');
+      if (current) {
+        setCurrentHeading(current.textContent ?? '');
+      }
     };
 
     let scrollTimeout: number;
     scrollHandlerRef.current = () => {
+      // Save scroll position
+      if (currentFile && contentAreaRef.current) {
+        localStorage.setItem('scrollPosition', String(contentAreaRef.current.scrollTop));
+      }
+
+      // Update current heading with debounce
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
@@ -224,7 +229,6 @@ export function FileViewer() {
       {/* Scrollable Content Area */}
       <div
         ref={contentAreaRef}
-        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-6"
       >
         {!currentFile ? (
