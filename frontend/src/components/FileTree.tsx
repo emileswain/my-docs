@@ -16,8 +16,10 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
   const [isLoading, setIsLoading] = useState(false);
   const toggleFolder = useStore((state) => state.toggleFolder);
   const currentProject = useStore((state) => state.currentProject);
+  const currentFile = useStore((state) => state.currentFile);
 
   const isOpen = openFolders.includes(item.path);
+  const isSelected = item.type === 'file' && currentFile === item.path;
 
   // Check if this item or any of its children match the filter
   const itemMatches = !filter || fuzzyMatch(item.name, filter) || fuzzyMatch(item.path, filter);
@@ -111,10 +113,12 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
   const icon = getFileIcon(item.extension || '');
   return (
     <div
-      className="tree-item py-1 px-2 rounded cursor-pointer hover:bg-gray-100"
+      className={`tree-item py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${
+        isSelected ? 'bg-blue-100 font-semibold' : ''
+      }`}
       onClick={handleFileClick}
     >
-      <i className={`fas ${icon} text-gray-500 mr-2`}></i>
+      <i className={`fas ${icon} ${isSelected ? 'text-blue-600' : 'text-gray-500'} mr-2`}></i>
       <span>{item.name}</span>
     </div>
   );
@@ -140,6 +144,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   const [allExpanded, setAllExpanded] = useState(false);
 
   const currentProject = useStore((state) => state.currentProject);
+  const currentFile = useStore((state) => state.currentFile);
   const openFoldersFromStore = useStore((state) => state.openFolders);
   const setOpenFoldersGlobal = useStore((state) => state.setOpenFolders);
   const leftPanelVisible = useStore((state) => state.leftPanelVisible);
@@ -164,6 +169,13 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
       loadProjectContents();
     }
   }, [currentProject, loadProjectContents]);
+
+  // Expand to show current file when it changes
+  useEffect(() => {
+    if (currentFile && currentProject && !filter) {
+      expandToCurrentFile();
+    }
+  }, [currentFile, currentProject, filter]);
 
   const handleToggleExpand = async () => {
     if (!currentProject) return;
@@ -195,9 +207,32 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   const clearFilter = () => {
     setFilter('');
     if (currentProject) {
-      setOpenFoldersGlobal(currentProject.id, []);
+      // Expand to show current file location instead of collapsing all
+      expandToCurrentFile();
     }
   };
+
+  const expandToCurrentFile = useCallback(() => {
+    if (!currentProject || !currentFile) {
+      if (currentProject) {
+        setOpenFoldersGlobal(currentProject.id, []);
+      }
+      return;
+    }
+
+    // Get all parent folders of the current file
+    const pathParts = currentFile.split('/').filter(p => p);
+    const foldersToOpen: string[] = [];
+    let currentPath = '';
+
+    // Build up the path to the current file
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      currentPath += '/' + pathParts[i];
+      foldersToOpen.push(currentPath);
+    }
+
+    setOpenFoldersGlobal(currentProject.id, foldersToOpen);
+  }, [currentProject, currentFile, setOpenFoldersGlobal]);
 
   // Auto-expand folders that contain matching files and show ALL matches
   const expandFoldersWithMatches = async (filterText: string) => {
