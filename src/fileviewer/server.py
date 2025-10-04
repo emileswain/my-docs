@@ -39,6 +39,12 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/admin')
+def admin():
+    """Serve the admin page."""
+    return render_template('admin.html')
+
+
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
     """Get list of all projects."""

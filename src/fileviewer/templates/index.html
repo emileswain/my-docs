@@ -66,33 +66,11 @@
             </div>
         </div>
 
-        <!-- Account Icon -->
-        <div class="relative">
-            <button id="accountBtn" class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <i class="fas fa-user-circle text-2xl text-gray-700"></i>
-            </button>
-            <div id="accountPanel" class="hidden absolute right-0 mt-2 w-96 bg-white shadow-lg rounded-md border border-gray-200 z-20">
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold mb-4">Projects</h3>
-
-                    <!-- Add Project -->
-                    <div class="mb-4 space-y-2">
-                        <input id="newProjectTitle" type="text" placeholder="Project Title (optional)" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <input id="newProjectDescription" type="text" placeholder="Description (optional)" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <div class="flex space-x-2">
-                            <input id="newProjectPath" type="text" placeholder="/path/to/folder" class="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button id="addProjectBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Project List -->
-                    <div id="watchedFoldersList" class="space-y-2 max-h-60 overflow-y-auto">
-                        <!-- Projects will be added here -->
-                    </div>
-                </div>
-            </div>
+        <!-- Settings Icon -->
+        <div>
+            <a href="/admin" class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 inline-block">
+                <i class="fas fa-cog text-2xl text-gray-700"></i>
+            </a>
         </div>
     </nav>
 

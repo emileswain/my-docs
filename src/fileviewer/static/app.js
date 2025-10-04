@@ -49,31 +49,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Setup event listeners
 function setupEventListeners() {
-    // Account panel toggle
-    document.getElementById('accountBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleAccountPanel();
-    });
-
     // Project dropdown toggle
     document.getElementById('folderDropdownBtn').addEventListener('click', (e) => {
         e.stopPropagation();
         toggleProjectDropdown();
-    });
-
-    // Add project
-    document.getElementById('addProjectBtn').addEventListener('click', addProject);
-
-    // Enter key in inputs
-    ['newProjectPath', 'newProjectTitle', 'newProjectDescription'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    addProject();
-                }
-            });
-        }
     });
 
     // Expand/collapse all
@@ -81,33 +60,20 @@ function setupEventListeners() {
     document.getElementById('collapseAllBtn').addEventListener('click', () => changeDepth(1));
 
     // Prevent clicks inside panels from closing them
-    document.getElementById('accountPanel').addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
-
     document.getElementById('folderDropdown').addEventListener('click', (e) => {
         e.stopPropagation();
     });
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', () => {
-        document.getElementById('accountPanel').classList.add('hidden');
         document.getElementById('folderDropdown').classList.add('hidden');
     });
-}
-
-// Toggle account panel
-function toggleAccountPanel() {
-    const panel = document.getElementById('accountPanel');
-    panel.classList.toggle('hidden');
-    document.getElementById('folderDropdown').classList.add('hidden');
 }
 
 // Toggle project dropdown
 function toggleProjectDropdown() {
     const dropdown = document.getElementById('folderDropdown');
     dropdown.classList.toggle('hidden');
-    document.getElementById('accountPanel').classList.add('hidden');
 }
 
 // Load projects
@@ -122,27 +88,9 @@ async function loadProjects() {
     }
 }
 
-// Render projects list
+// Render projects list (not needed in main view anymore)
 function renderProjects() {
-    const list = document.getElementById('watchedFoldersList');
-
-    if (projects.length === 0) {
-        list.innerHTML = '<p class="text-gray-400 italic text-sm">No projects</p>';
-        return;
-    }
-
-    list.innerHTML = projects.map(project => `
-        <div class="p-2 bg-gray-50 rounded hover:bg-gray-100">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-sm font-semibold text-gray-800">${escapeHtml(project.title)}</span>
-                <button onclick="removeProject('${project.id}')" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-trash text-sm"></i>
-                </button>
-            </div>
-            ${project.description ? `<p class="text-xs text-gray-500 mb-1">${escapeHtml(project.description)}</p>` : ''}
-            <p class="text-xs text-gray-400 truncate" title="${project.path}">${project.path}</p>
-        </div>
-    `).join('');
+    // Projects are managed in admin panel
 }
 
 // Render project dropdown
@@ -160,80 +108,6 @@ function renderProjectDropdown() {
             ${project.description ? `<div class="text-xs text-gray-500">${escapeHtml(project.description)}</div>` : ''}
         </div>
     `).join('');
-}
-
-// Add project
-async function addProject() {
-    const pathInput = document.getElementById('newProjectPath');
-    const titleInput = document.getElementById('newProjectTitle');
-    const descInput = document.getElementById('newProjectDescription');
-
-    const path = pathInput.value.trim();
-    const title = titleInput.value.trim();
-    const description = descInput.value.trim();
-
-    if (!path) {
-        alert('Please enter a project path');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path, title, description })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            pathInput.value = '';
-            titleInput.value = '';
-            descInput.value = '';
-            await loadProjects();
-        } else {
-            alert(result.error || 'Failed to add project');
-        }
-    } catch (error) {
-        console.error('Error adding project:', error);
-        alert('Failed to add project');
-    }
-}
-
-// Remove project
-async function removeProject(projectId) {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-
-    if (!confirm(`Remove project "${project.title}"?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/projects/${projectId}`, {
-            method: 'DELETE'
-        });
-
-        if (response.ok) {
-            if (currentProject && currentProject.id === projectId) {
-                currentProject = null;
-                document.getElementById('currentFolderName').textContent = 'Select Project';
-                document.getElementById('fileTree').innerHTML = '<p class="text-gray-400 italic">Select a project to browse</p>';
-                localStorage.removeItem('currentProjectId');
-                localStorage.removeItem('currentFile');
-
-                // Clear URL
-                window.history.pushState({}, '', '/');
-            }
-            await loadProjects();
-        } else {
-            const result = await response.json();
-            alert(result.error || 'Failed to remove project');
-        }
-    } catch (error) {
-        console.error('Error removing project:', error);
-        alert('Failed to remove project');
-    }
 }
 
 // Select project by ID (helper)
