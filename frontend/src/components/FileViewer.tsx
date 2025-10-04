@@ -13,7 +13,7 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
   const setShowRaw = useStore((state) => state.setShowRaw);
   const setCurrentHeading = useStore((state) => state.setCurrentHeading);
   const currentHeading = useStore((state) => state.currentHeading);
-  const scrollHandlerRef = useRef<(() => void) | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
   const isMarkdown = extension === '.md' && currentFileContent?.html;
@@ -22,14 +22,14 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
     if (isMarkdown && !showRaw && contentAreaRef.current) {
       addCopyButtonsToCodeBlocks();
       setupHeaderTracking();
-    }
 
-    return () => {
-      // Cleanup scroll handler
-      if (scrollHandlerRef.current && contentAreaRef.current) {
-        contentAreaRef.current.removeEventListener('scroll', scrollHandlerRef.current);
-      }
-    };
+      return () => {
+        // Cleanup observer
+        if (observerRef.current) {
+          observerRef.current.disconnect();
+        }
+      };
+    }
   }, [currentFileContent, showRaw, isMarkdown]);
 
   // Save and restore scroll position
@@ -48,51 +48,71 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
 
   const setupHeaderTracking = () => {
     const markdownContent = contentAreaRef.current?.querySelector('#markdownContent');
-    if (!markdownContent || !contentAreaRef.current) return;
+    const contentArea = contentAreaRef.current;
 
-    const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    if (headings.length === 0) return;
-
-    // Remove old scroll listener
-    if (scrollHandlerRef.current && contentAreaRef.current) {
-      contentAreaRef.current.removeEventListener('scroll', scrollHandlerRef.current);
+    if (!markdownContent || !contentArea) {
+      console.log('setupHeaderTracking: missing elements');
+      return;
     }
 
+    const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    console.log('setupHeaderTracking: found', headings.length, 'headings');
+
+    if (headings.length === 0) return;
+
     const updateCurrentHeading = () => {
-      if (!contentAreaRef.current) return;
+      console.log('=== updateCurrentHeading called ===');
+      console.log('contentArea exists:', !!contentArea);
+      console.log('contentArea.isConnected:', contentArea.isConnected);
 
-      const contentAreaRect = contentAreaRef.current.getBoundingClientRect();
-      const contentAreaTop = contentAreaRect.top;
+      const contentAreaRect = contentArea.getBoundingClientRect();
+      console.log('contentAreaRect:', contentAreaRect);
 
-      let current = null as HTMLElement | null;
+      const headingsAbove: Element[] = [];
 
-      Array.from(headings).forEach((heading) => {
-        const headingRect = heading.getBoundingClientRect();
-        if (headingRect.top <= contentAreaTop + 100) {
-          current = heading as HTMLElement;
+      // Re-query headings to ensure we have current DOM elements
+      const currentHeadings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      console.log('Current headings in DOM:', currentHeadings.length);
+
+      currentHeadings.forEach((heading) => {
+        const rect = heading.getBoundingClientRect();
+        const isAbove = rect.top < contentAreaRect.top + 20;
+
+        console.log(heading.textContent?.substring(0, 20), {
+          rect,
+          isAbove,
+          isConnected: heading.isConnected
+        });
+
+        if (isAbove) {
+          headingsAbove.push(heading);
         }
       });
 
-      if (current) {
-        setCurrentHeading(current.textContent ?? '');
+      console.log('Headings above viewport:', headingsAbove.length, headingsAbove.map(h => h.textContent?.substring(0, 30)));
+
+      const lastHeadingAbove = headingsAbove[headingsAbove.length - 1];
+
+      if (lastHeadingAbove) {
+        console.log('Setting active heading to:', lastHeadingAbove.textContent?.substring(0, 30));
+        setCurrentHeading(lastHeadingAbove.textContent || '');
+      } else {
+        console.log('No heading above, clearing active heading');
+        setCurrentHeading('');
       }
     };
 
-    let scrollTimeout: number;
-    scrollHandlerRef.current = () => {
-      // Save scroll position
-      if (currentFile && contentAreaRef.current) {
-        localStorage.setItem('scrollPosition', String(contentAreaRef.current.scrollTop));
+    // Scroll handler with position saving
+    const scrollHandler = () => {
+      if (currentFile) {
+        localStorage.setItem('scrollPosition', String(contentArea.scrollTop));
       }
-
-      // Update current heading with debounce
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-      scrollTimeout = window.setTimeout(updateCurrentHeading, 50);
+      updateCurrentHeading();
     };
 
-    contentAreaRef.current.addEventListener('scroll', scrollHandlerRef.current);
+    contentArea.addEventListener('scroll', scrollHandler);
+
+    // Initial update
     updateCurrentHeading();
   };
 
