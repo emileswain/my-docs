@@ -723,10 +723,11 @@ function renderTreeNodes(nodes, depth) {
     return nodes.map(node => {
         const hasChildren = node.children && node.children.length > 0;
         const indent = depth * 12; // 12px per level
+        const safeLabel = escapeHtml(node.label).replace(/'/g, "\\'");
 
         return `
             <div class="mb-1">
-                <div class="tree-item py-1 px-2 rounded flex items-center cursor-pointer hover:bg-gray-100" style="padding-left: ${indent}px" onclick="scrollToSection('${escapeHtml(node.label).replace(/'/g, "\\'")}')">
+                <div class="structure-tree-item py-1 px-2 rounded flex items-center cursor-pointer hover:bg-gray-100" style="padding-left: ${indent}px" data-section="${safeLabel}" onclick="scrollToSection('${safeLabel}')">
                     ${hasChildren ? '<i class="fas fa-angle-right text-xs mr-2 text-gray-400"></i>' : '<span class="w-4 inline-block"></span>'}
                     <span class="text-sm">${escapeHtml(node.label)}</span>
                     ${node.type ? `<span class="ml-2 text-xs text-gray-400">${node.type}</span>` : ''}
@@ -813,8 +814,10 @@ function setupHeaderTracking() {
         // Update the display
         if (currentHeading) {
             currentHeadingElement.textContent = currentHeading.textContent;
+            highlightStructureTreeItem(currentHeading.textContent);
         } else {
             currentHeadingElement.textContent = '';
+            highlightStructureTreeItem(null);
         }
     }
 
@@ -831,6 +834,24 @@ function setupHeaderTracking() {
 
     // Initial update
     updateCurrentHeading();
+}
+
+// Highlight the corresponding item in the structure tree
+function highlightStructureTreeItem(headingText) {
+    // Remove all existing highlights
+    document.querySelectorAll('.structure-tree-item').forEach(item => {
+        item.classList.remove('bg-blue-100', 'font-semibold');
+    });
+
+    if (!headingText) return;
+
+    // Find and highlight the matching item
+    document.querySelectorAll('.structure-tree-item').forEach(item => {
+        const section = item.getAttribute('data-section');
+        if (section === headingText) {
+            item.classList.add('bg-blue-100', 'font-semibold');
+        }
+    });
 }
 
 // Escape HTML
