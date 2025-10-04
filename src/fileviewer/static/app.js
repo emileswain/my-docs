@@ -55,9 +55,6 @@ function setupEventListeners() {
         toggleProjectDropdown();
     });
 
-    // Expand/collapse all (structure tree)
-    document.getElementById('expandAllBtn').addEventListener('click', () => changeDepth(10));
-    document.getElementById('collapseAllBtn').addEventListener('click', () => changeDepth(1));
 
     // Toggle expand/collapse all (file folders)
     let allExpanded = false;
@@ -721,51 +718,50 @@ function renderStructureTree(tree) {
     structureTree.innerHTML = renderTreeNodes(tree, 1);
 }
 
-// Render tree nodes
+// Render tree nodes - always expanded, clickable to scroll to section
 function renderTreeNodes(nodes, depth) {
     return nodes.map(node => {
         const hasChildren = node.children && node.children.length > 0;
-        const isExpanded = depth <= globalDepth;
+        const indent = depth * 12; // 12px per level
 
         return `
             <div class="mb-1">
-                <div class="tree-item py-1 px-2 rounded flex items-center" onclick="toggleTreeNode(this)">
-                    ${hasChildren ? `<i class="fas fa-chevron-${isExpanded ? 'down' : 'right'} text-xs mr-2 text-gray-400"></i>` : '<span class="w-4 inline-block"></span>'}
+                <div class="tree-item py-1 px-2 rounded flex items-center cursor-pointer hover:bg-gray-100" style="padding-left: ${indent}px" onclick="scrollToSection('${escapeHtml(node.label).replace(/'/g, "\\'")}')">
+                    ${hasChildren ? '<i class="fas fa-angle-right text-xs mr-2 text-gray-400"></i>' : '<span class="w-4 inline-block"></span>'}
                     <span class="text-sm">${escapeHtml(node.label)}</span>
                     ${node.type ? `<span class="ml-2 text-xs text-gray-400">${node.type}</span>` : ''}
                 </div>
-                ${hasChildren ? `<div class="tree-children ${isExpanded ? '' : 'hidden'}">${renderTreeNodes(node.children, depth + 1)}</div>` : ''}
+                ${hasChildren ? renderTreeNodes(node.children, depth + 1) : ''}
             </div>
         `;
     }).join('');
 }
 
-// Toggle tree node
-function toggleTreeNode(element) {
-    event.stopPropagation();
-    const parent = element.parentElement;
-    const childrenDiv = parent.querySelector('.tree-children');
-    const icon = element.querySelector('i');
+// Scroll to section in the content area
+function scrollToSection(label) {
+    const contentArea = document.getElementById('contentArea');
+    const markdownContent = document.getElementById('markdownContent');
 
-    if (childrenDiv && icon) {
-        if (childrenDiv.classList.contains('hidden')) {
-            childrenDiv.classList.remove('hidden');
-            icon.classList.remove('fa-chevron-right');
-            icon.classList.add('fa-chevron-down');
-        } else {
-            childrenDiv.classList.add('hidden');
-            icon.classList.remove('fa-chevron-down');
-            icon.classList.add('fa-chevron-right');
+    if (!markdownContent) return;
+
+    // Find all headings in the markdown content
+    const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+    // Find the heading that matches the label
+    for (const heading of headings) {
+        if (heading.textContent.trim() === label) {
+            // Calculate the position relative to the content area
+            const contentAreaRect = contentArea.getBoundingClientRect();
+            const headingRect = heading.getBoundingClientRect();
+            const scrollOffset = contentArea.scrollTop + (headingRect.top - contentAreaRect.top) - 20; // 20px offset
+
+            // Smooth scroll to the heading
+            contentArea.scrollTo({
+                top: scrollOffset,
+                behavior: 'smooth'
+            });
+            break;
         }
-    }
-}
-
-// Change depth
-function changeDepth(newDepth) {
-    globalDepth = newDepth;
-    if (currentFile) {
-        // Reload structure tree with new depth
-        selectFile(currentFile, currentFile.split('/').pop());
     }
 }
 
