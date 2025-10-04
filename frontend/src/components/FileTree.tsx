@@ -19,10 +19,17 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
 
   const isOpen = openFolders.includes(item.path);
 
-  // Filter children if filter is active
-  const filteredChildren = filter
-    ? children.filter((child) => fuzzyMatch(child.name, filter) || fuzzyMatch(child.path, filter))
-    : children;
+  // Check if this item or any of its children match the filter
+  const itemMatches = !filter || fuzzyMatch(item.name, filter) || fuzzyMatch(item.path, filter);
+
+  // For folders, show if folder itself matches OR if it's in openFolders (meaning it has matching children)
+  const shouldShowFolder = !filter || itemMatches || isOpen;
+
+  // For files, show only if matches
+  const shouldShowFile = !filter || itemMatches;
+
+  // Don't filter children - let them filter themselves recursively
+  const filteredChildren = children;
 
   const loadFolderContent = async () => {
     if (!currentProject || children.length > 0) return;
@@ -63,6 +70,9 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
   }, [isOpen]);
 
   if (item.type === 'folder') {
+    // Don't render folder if it doesn't match filter criteria
+    if (!shouldShowFolder) return null;
+
     const folderIcon = isOpen ? 'fa-folder-open' : 'fa-folder';
     return (
       <div>
@@ -94,6 +104,9 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
       </div>
     );
   }
+
+  // Don't render file if it doesn't match filter
+  if (!shouldShowFile) return null;
 
   const icon = getFileIcon(item.extension || '');
   return (
@@ -173,35 +186,27 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     // Auto-expand folders containing matches when filtering
     if (newFilter && currentProject) {
       expandFoldersWithMatches(newFilter);
+    } else if (!newFilter && currentProject) {
+      // Clear expanded folders when filter is cleared
+      setOpenFoldersGlobal(currentProject.id, []);
     }
   };
 
   const clearFilter = () => {
     setFilter('');
-  };
-
-  // Recursively check if item or any descendants match the filter
-  const itemMatchesFilter = (item: FileItem, filterText: string): boolean => {
-    if (!filterText) return true;
-
-    // Check if the item itself matches
-    if (fuzzyMatch(item.name, filterText) || fuzzyMatch(item.path, filterText)) {
-      return true;
+    if (currentProject) {
+      setOpenFoldersGlobal(currentProject.id, []);
     }
-
-    // For folders, we'll check descendants when they're loaded
-    // For now, just match against the folder name
-    return false;
   };
 
-  // Auto-expand folders that contain matching files
+  // Auto-expand folders that contain matching files and show ALL matches
   const expandFoldersWithMatches = async (filterText: string) => {
     if (!currentProject || !filterText) return;
 
     const foldersToExpand: string[] = [];
 
     // Recursively search for matches and collect parent folders
-    const searchInFolder = async (folderPath: string): Promise<boolean> => {
+    const searchInFolder = async (folderPath: string, ancestorPaths: string[] = []): Promise<boolean> => {
       const relativePath = folderPath.startsWith(currentProject.path)
         ? folderPath.substring(currentProject.path.length).replace(/^\/+/, '')
         : '';
@@ -212,14 +217,34 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
 
         for (const item of data.items) {
           if (item.type === 'file') {
+            // Check if file name or path matches
             if (fuzzyMatch(item.name, filterText) || fuzzyMatch(item.path, filterText)) {
               hasMatch = true;
+              // Add all ancestor folders to expansion list
+              ancestorPaths.forEach(path => {
+                if (!foldersToExpand.includes(path)) {
+                  foldersToExpand.push(path);
+                }
+              });
             }
           } else if (item.type === 'folder') {
-            const childHasMatch = await searchInFolder(item.path);
-            if (childHasMatch) {
-              foldersToExpand.push(item.path);
+            // Check folder name itself
+            const folderMatches = fuzzyMatch(item.name, filterText);
+
+            // Recursively check children
+            const childHasMatch = await searchInFolder(item.path, [...ancestorPaths, folderPath, item.path]);
+
+            if (childHasMatch || folderMatches) {
               hasMatch = true;
+              // Add this folder and all ancestors to expansion list
+              if (!foldersToExpand.includes(item.path)) {
+                foldersToExpand.push(item.path);
+              }
+              ancestorPaths.forEach(path => {
+                if (!foldersToExpand.includes(path)) {
+                  foldersToExpand.push(path);
+                }
+              });
             }
           }
         }
@@ -234,22 +259,21 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     // Search starting from root
     for (const item of items) {
       if (item.type === 'folder') {
-        const hasMatch = await searchInFolder(item.path);
-        if (hasMatch) {
-          foldersToExpand.push(item.path);
+        await searchInFolder(item.path, [item.path]);
+      } else if (item.type === 'file') {
+        // Check top-level files too
+        if (fuzzyMatch(item.name, filterText) || fuzzyMatch(item.path, filterText)) {
+          // No folders to expand for top-level files
         }
       }
     }
 
     // Update open folders to include all folders with matches
-    if (foldersToExpand.length > 0) {
-      setOpenFoldersGlobal(currentProject.id, foldersToExpand);
-    }
+    setOpenFoldersGlobal(currentProject.id, foldersToExpand);
   };
 
-  const filteredItems = filter
-    ? items.filter((item) => itemMatchesFilter(item, filter))
-    : items;
+  // Don't filter top-level items - show all, filtering happens in children
+  const filteredItems = items;
 
   if (!leftPanelVisible) {
     return (
