@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .tree-item {
+            cursor: pointer;
+            user-select: none;
+        }
+        .tree-item:hover {
+            background-color: #f3f4f6;
+        }
+        .tree-children {
+            margin-left: 1.5rem;
+        }
+        .main-content {
+            height: calc(100vh - 4rem);
+        }
+        .panel {
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Top Navigation -->
+    <nav class="bg-white shadow-sm h-16 flex items-center justify-between px-6">
+        <div class="flex items-center space-x-4 flex-1">
+            <h1 class="text-xl font-bold text-gray-800">File Viewer</h1>
+
+            <!-- Folder Dropdown -->
+            <div class="relative">
+                <button id="folderDropdownBtn" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="fas fa-folder mr-2"></i>
+                    <span id="currentFolderName">Select Folder</span>
+                    <i class="fas fa-chevron-down ml-2"></i>
+                </button>
+                <div id="folderDropdown" class="hidden absolute z-10 mt-1 w-64 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto">
+                    <div id="folderList" class="py-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Icon -->
+        <div class="relative">
+            <button id="accountBtn" class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <i class="fas fa-user-circle text-2xl text-gray-700"></i>
+            </button>
+            <div id="accountPanel" class="hidden absolute right-0 mt-2 w-96 bg-white shadow-lg rounded-md border border-gray-200 z-20">
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-4">Watched Folders</h3>
+
+                    <!-- Add Folder -->
+                    <div class="mb-4">
+                        <div class="flex space-x-2">
+                            <input id="newFolderPath" type="text" placeholder="/path/to/folder" class="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="addFolderBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Folder List -->
+                    <div id="watchedFoldersList" class="space-y-2 max-h-60 overflow-y-auto">
+                        <!-- Folders will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="main-content flex">
+        <!-- Left Panel: File Browser -->
+        <div class="w-1/4 bg-white border-r border-gray-200 panel p-4">
+            <h2 class="text-sm font-semibold text-gray-600 mb-4 uppercase">Files</h2>
+            <div id="fileTree" class="text-sm">
+                <p class="text-gray-400 italic">Select a folder to browse</p>
+            </div>
+        </div>
+
+        <!-- Center Panel: Content Tree -->
+        <div class="flex-1 bg-white panel p-6">
+            <div id="contentArea">
+                <div class="flex items-center justify-center h-full text-gray-400">
+                    <div class="text-center">
+                        <i class="fas fa-file-alt text-6xl mb-4"></i>
+                        <p>Select a file to view its structure</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Content Tree Details -->
+        <div class="w-1/4 bg-white border-l border-gray-200 panel p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-semibold text-gray-600 uppercase">Structure</h2>
+                <div class="flex space-x-2">
+                    <button id="expandAllBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Expand All">
+                        <i class="fas fa-plus-circle"></i>
+                    </button>
+                    <button id="collapseAllBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Collapse All">
+                        <i class="fas fa-minus-circle"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="structureTree" class="text-sm">
+                <p class="text-gray-400 italic">No file selected</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

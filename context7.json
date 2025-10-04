@@ -1,0 +1,28 @@
+{
+  "mcp": {
+    "servers": {
+      "context7": {
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp"]
+      }
+    }
+  },
+  "libraries": [
+    {
+      "name": "flask",
+      "version": "latest"
+    },
+    {
+      "name": "watchdog",
+      "version": "latest"
+    },
+    {
+      "name": "pyyaml",
+      "version": "latest"
+    },
+    {
+      "name": "markdown",
+      "version": "latest"
+    }
+  ]
+}
