@@ -57,7 +57,7 @@
             <div class="relative">
                 <button id="folderDropdownBtn" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <i class="fas fa-folder mr-2"></i>
-                    <span id="currentFolderName">Select Folder</span>
+                    <span id="currentFolderName">Select Project</span>
                     <i class="fas fa-chevron-down ml-2"></i>
                 </button>
                 <div id="folderDropdown" class="hidden absolute z-10 mt-1 w-64 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto">
@@ -73,21 +73,23 @@
             </button>
             <div id="accountPanel" class="hidden absolute right-0 mt-2 w-96 bg-white shadow-lg rounded-md border border-gray-200 z-20">
                 <div class="p-4">
-                    <h3 class="text-lg font-semibold mb-4">Watched Folders</h3>
+                    <h3 class="text-lg font-semibold mb-4">Projects</h3>
 
-                    <!-- Add Folder -->
-                    <div class="mb-4">
+                    <!-- Add Project -->
+                    <div class="mb-4 space-y-2">
+                        <input id="newProjectTitle" type="text" placeholder="Project Title (optional)" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input id="newProjectDescription" type="text" placeholder="Description (optional)" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <div class="flex space-x-2">
-                            <input id="newFolderPath" type="text" placeholder="/path/to/folder" class="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button id="addFolderBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input id="newProjectPath" type="text" placeholder="/path/to/folder" class="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="addProjectBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Folder List -->
+                    <!-- Project List -->
                     <div id="watchedFoldersList" class="space-y-2 max-h-60 overflow-y-auto">
-                        <!-- Folders will be added here -->
+                        <!-- Projects will be added here -->
                     </div>
                 </div>
             </div>
@@ -100,7 +102,7 @@
         <div class="w-1/4 bg-white border-r border-gray-200 panel p-4">
             <h2 class="text-sm font-semibold text-gray-600 mb-4 uppercase">Files</h2>
             <div id="fileTree" class="text-sm">
-                <p class="text-gray-400 italic">Select a folder to browse</p>
+                <p class="text-gray-400 italic">Select a project to browse</p>
             </div>
         </div>
 

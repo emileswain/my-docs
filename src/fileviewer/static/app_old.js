@@ -11,9 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadProjects();
     setupEventListeners();
 
-    // Check for project in URL query parameter
+    // Check for project in URL path or query parameter
     const urlParams = new URLSearchParams(window.location.search);
     const projectParam = urlParams.get('project');
+    const fileParam = urlParams.get('file');
 
     if (projectParam) {
         // Find project by slug or ID
@@ -21,11 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (project) {
             await selectProject(project, false); // Don't update URL when loading from URL
 
-            // Check localStorage for previously selected file in this project
-            const savedFile = localStorage.getItem('currentFile');
-            if (savedFile && savedFile.startsWith(project.path)) {
-                const fileName = savedFile.split('/').pop();
-                await selectFile(savedFile, fileName);
+            // If file parameter is also present, load that file
+            if (fileParam) {
+                const fileName = fileParam.split('/').pop();
+                await selectFile(fileParam, fileName);
             }
         }
     } else {
@@ -35,13 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const project = projects.find(p => p.id === savedProjectId);
             if (project) {
                 await selectProject(project);
-
-                // Restore previously selected file
-                const savedFile = localStorage.getItem('currentFile');
-                if (savedFile && savedFile.startsWith(project.path)) {
-                    const fileName = savedFile.split('/').pop();
-                    await selectFile(savedFile, fileName);
-                }
             }
         }
     }
@@ -55,24 +48,19 @@ function setupEventListeners() {
         toggleAccountPanel();
     });
 
-    // Project dropdown toggle
+    // Folder dropdown toggle
     document.getElementById('folderDropdownBtn').addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleProjectDropdown();
+        toggleFolderDropdown();
     });
 
     // Add project
     document.getElementById('addProjectBtn').addEventListener('click', addProject);
 
-    // Enter key in inputs
-    ['newProjectPath', 'newProjectTitle', 'newProjectDescription'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    addProject();
-                }
-            });
+    // Enter key in path input
+    document.getElementById('newProjectPath').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addProject();
         }
     });
 
@@ -103,183 +91,167 @@ function toggleAccountPanel() {
     document.getElementById('folderDropdown').classList.add('hidden');
 }
 
-// Toggle project dropdown
-function toggleProjectDropdown() {
+// Toggle folder dropdown
+function toggleFolderDropdown() {
     const dropdown = document.getElementById('folderDropdown');
     dropdown.classList.toggle('hidden');
     document.getElementById('accountPanel').classList.add('hidden');
 }
 
-// Load projects
-async function loadProjects() {
+// Load watched folders
+async function loadWatchedFolders() {
     try {
-        const response = await fetch('/api/projects');
-        projects = await response.json();
-        renderProjects();
-        renderProjectDropdown();
+        const response = await fetch('/api/folders');
+        watchedFolders = await response.json();
+        renderWatchedFolders();
+        renderFolderDropdown();
     } catch (error) {
-        console.error('Error loading projects:', error);
+        console.error('Error loading folders:', error);
     }
 }
 
-// Render projects list
-function renderProjects() {
+// Render watched folders list
+function renderWatchedFolders() {
     const list = document.getElementById('watchedFoldersList');
 
-    if (projects.length === 0) {
-        list.innerHTML = '<p class="text-gray-400 italic text-sm">No projects</p>';
+    if (watchedFolders.length === 0) {
+        list.innerHTML = '<p class="text-gray-400 italic text-sm">No folders being watched</p>';
         return;
     }
 
-    list.innerHTML = projects.map(project => `
-        <div class="p-2 bg-gray-50 rounded hover:bg-gray-100">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-sm font-semibold text-gray-800">${escapeHtml(project.title)}</span>
-                <button onclick="removeProject('${project.id}')" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-trash text-sm"></i>
-                </button>
-            </div>
-            ${project.description ? `<p class="text-xs text-gray-500 mb-1">${escapeHtml(project.description)}</p>` : ''}
-            <p class="text-xs text-gray-400 truncate" title="${project.path}">${project.path}</p>
+    list.innerHTML = watchedFolders.map(folder => `
+        <div class="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100">
+            <span class="text-sm text-gray-700 truncate flex-1" title="${folder}">${folder}</span>
+            <button onclick="removeFolder('${folder.replace(/'/g, "\\'")}')" class="ml-2 text-red-600 hover:text-red-800">
+                <i class="fas fa-trash text-sm"></i>
+            </button>
         </div>
     `).join('');
 }
 
-// Render project dropdown
-function renderProjectDropdown() {
+// Render folder dropdown
+function renderFolderDropdown() {
     const dropdown = document.getElementById('folderList');
 
-    if (projects.length === 0) {
-        dropdown.innerHTML = '<p class="px-4 py-2 text-gray-400 italic text-sm">No projects available</p>';
+    if (watchedFolders.length === 0) {
+        dropdown.innerHTML = '<p class="px-4 py-2 text-gray-400 italic text-sm">No folders available</p>';
         return;
     }
 
-    dropdown.innerHTML = projects.map(project => `
-        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer" onclick="selectProjectById('${project.id}')">
-            <div class="text-sm font-semibold text-gray-800">${escapeHtml(project.title)}</div>
-            ${project.description ? `<div class="text-xs text-gray-500">${escapeHtml(project.description)}</div>` : ''}
+    dropdown.innerHTML = watchedFolders.map(folder => `
+        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm" onclick="selectFolder('${folder.replace(/'/g, "\\'")}')">
+            <i class="fas fa-folder text-blue-500 mr-2"></i>
+            ${folder}
         </div>
     `).join('');
 }
 
-// Add project
-async function addProject() {
-    const pathInput = document.getElementById('newProjectPath');
-    const titleInput = document.getElementById('newProjectTitle');
-    const descInput = document.getElementById('newProjectDescription');
-
-    const path = pathInput.value.trim();
-    const title = titleInput.value.trim();
-    const description = descInput.value.trim();
+// Add folder
+async function addFolder() {
+    const input = document.getElementById('newFolderPath');
+    const path = input.value.trim();
 
     if (!path) {
-        alert('Please enter a project path');
+        alert('Please enter a folder path');
         return;
     }
 
     try {
-        const response = await fetch('/api/projects', {
+        const response = await fetch('/api/folders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path, title, description })
+            body: JSON.stringify({ path })
         });
 
         const result = await response.json();
 
         if (response.ok) {
-            pathInput.value = '';
-            titleInput.value = '';
-            descInput.value = '';
-            await loadProjects();
+            input.value = '';
+            await loadWatchedFolders();
         } else {
-            alert(result.error || 'Failed to add project');
+            alert(result.error || 'Failed to add folder');
         }
     } catch (error) {
-        console.error('Error adding project:', error);
-        alert('Failed to add project');
+        console.error('Error adding folder:', error);
+        alert('Failed to add folder');
     }
 }
 
-// Remove project
-async function removeProject(projectId) {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-
-    if (!confirm(`Remove project "${project.title}"?`)) {
+// Remove folder
+async function removeFolder(path) {
+    if (!confirm(`Remove ${path} from watched folders?`)) {
         return;
     }
 
     try {
-        const response = await fetch(`/api/projects/${projectId}`, {
+        const encodedPath = path.substring(1); // Remove leading /
+        const response = await fetch(`/api/folders/${encodedPath}`, {
             method: 'DELETE'
         });
 
         if (response.ok) {
-            if (currentProject && currentProject.id === projectId) {
-                currentProject = null;
-                document.getElementById('currentFolderName').textContent = 'Select Project';
-                document.getElementById('fileTree').innerHTML = '<p class="text-gray-400 italic">Select a project to browse</p>';
-                localStorage.removeItem('currentProjectId');
-                localStorage.removeItem('currentFile');
+            if (currentFolder === path) {
+                currentFolder = null;
+                document.getElementById('currentFolderName').textContent = 'Select Folder';
+                document.getElementById('fileTree').innerHTML = '<p class="text-gray-400 italic">Select a folder to browse</p>';
+                localStorage.removeItem('currentFolder');
 
-                // Clear URL
-                window.history.pushState({}, '', '/');
+                // Clear URL parameters
+                const url = new URL(window.location);
+                url.searchParams.delete('folder');
+                url.searchParams.delete('file');
+                window.history.pushState({}, '', url);
             }
-            await loadProjects();
+            await loadWatchedFolders();
         } else {
             const result = await response.json();
-            alert(result.error || 'Failed to remove project');
+            alert(result.error || 'Failed to remove folder');
         }
     } catch (error) {
-        console.error('Error removing project:', error);
-        alert('Failed to remove project');
+        console.error('Error removing folder:', error);
+        alert('Failed to remove folder');
     }
 }
 
-// Select project by ID (helper)
-function selectProjectById(projectId) {
-    const project = projects.find(p => p.id === projectId);
-    if (project) {
-        selectProject(project);
-    }
-}
-
-// Select project
-async function selectProject(project, updateUrl = true) {
-    currentProject = project;
-    document.getElementById('currentFolderName').textContent = project.title;
+// Select folder
+async function selectFolder(path, updateUrl = true) {
+    currentFolder = path;
+    document.getElementById('currentFolderName').textContent = path.split('/').pop() || path;
     document.getElementById('folderDropdown').classList.add('hidden');
 
     // Save to localStorage
-    localStorage.setItem('currentProjectId', project.id);
+    localStorage.setItem('currentFolder', path);
 
-    // Update URL with clean slug path
+    // Update URL with query parameter
     if (updateUrl) {
-        window.history.pushState({}, '', `/?project=${project.slug}`);
+        const url = new URL(window.location);
+        url.searchParams.set('folder', path);
+        window.history.pushState({}, '', url);
     }
 
-    await loadProjectContents(project);
+    await loadFolderContents(path);
 }
 
-// Load project contents
-async function loadProjectContents(project) {
+// Load folder contents
+async function loadFolderContents(path) {
     try {
-        const response = await fetch(`/api/projects/${project.id}/browse`);
+        const encodedPath = path.substring(1); // Remove leading /
+        const response = await fetch(`/api/browse/${encodedPath}`);
         const data = await response.json();
 
         if (response.ok) {
-            renderFileTree(data.items);
+            renderFileTree(data.items, path);
         } else {
             document.getElementById('fileTree').innerHTML = `<p class="text-red-500">${data.error}</p>`;
         }
     } catch (error) {
-        console.error('Error loading project:', error);
-        document.getElementById('fileTree').innerHTML = '<p class="text-red-500">Error loading project</p>';
+        console.error('Error loading folder:', error);
+        document.getElementById('fileTree').innerHTML = '<p class="text-red-500">Error loading folder</p>';
     }
 }
 
 // Render file tree
-function renderFileTree(items) {
+function renderFileTree(items, basePath) {
     const tree = document.getElementById('fileTree');
 
     if (items.length === 0) {
@@ -379,8 +351,13 @@ async function selectFile(path, name) {
     currentFile = path;
     showRaw = false; // Reset to rendered view when selecting new file
 
-    // Save file to localStorage (no URL change)
-    localStorage.setItem('currentFile', path);
+    // Update URL with file parameter
+    const url = new URL(window.location);
+    if (currentFolder) {
+        url.searchParams.set('folder', currentFolder);
+    }
+    url.searchParams.set('file', path);
+    window.history.pushState({}, '', url);
 
     try {
         const encodedPath = path.substring(1);
@@ -408,6 +385,7 @@ function renderFileContent(data, name, path) {
     currentFileData = { data, name, path };
 
     let renderedContent = '';
+    let showToggle = false;
 
     if (showRaw) {
         // Always show raw content when toggle is on
@@ -415,6 +393,7 @@ function renderFileContent(data, name, path) {
     } else if (extension === '.md' && data.html) {
         // Render markdown as HTML
         renderedContent = `<div class="prose prose-slate max-w-none">${data.html}</div>`;
+        showToggle = true;
     } else if (extension === '.json') {
         // Pretty print JSON
         try {

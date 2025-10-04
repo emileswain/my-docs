@@ -11,11 +11,12 @@ from flask import Flask, jsonify, render_template, request
 
 from .watcher import FolderWatcher
 from .file_parser import FileParser
+from .project import ProjectManager
 
 app = Flask(__name__)
-app.config['watched_folders'] = []
+app.config['project_manager'] = None
 app.config['watchers'] = {}
-app.config['config_file'] = Path.home() / '.fileviewer' / 'watched_folders.json'
+app.config['config_file'] = Path.home() / '.fileviewer' / 'projects.json'
 
 
 def find_free_port(start_port: int = 6060, max_attempts: int = 100) -> int:
@@ -30,21 +31,6 @@ def find_free_port(start_port: int = 6060, max_attempts: int = 100) -> int:
     raise RuntimeError(f"Could not find a free port in range {start_port}-{start_port + max_attempts}")
 
 
-def load_watched_folders() -> List[str]:
-    """Load watched folders from config file."""
-    config_file = app.config['config_file']
-    if config_file.exists():
-        with open(config_file, 'r') as f:
-            return json.load(f)
-    return []
-
-
-def save_watched_folders(folders: List[str]) -> None:
-    """Save watched folders to config file."""
-    config_file = app.config['config_file']
-    config_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(config_file, 'w') as f:
-        json.dump(folders, f, indent=2)
 
 
 @app.route('/')
@@ -53,17 +39,21 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/api/folders', methods=['GET'])
-def get_folders():
-    """Get list of watched folders."""
-    return jsonify(app.config['watched_folders'])
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    """Get list of all projects."""
+    pm = app.config['project_manager']
+    projects = [p.to_dict() for p in pm.get_all_projects()]
+    return jsonify(projects)
 
 
-@app.route('/api/folders', methods=['POST'])
-def add_folder():
-    """Add a folder to watch."""
+@app.route('/api/projects', methods=['POST'])
+def add_project():
+    """Add a new project."""
     data = request.json
     folder_path = data.get('path')
+    title = data.get('title')
+    description = data.get('description', '')
 
     if not folder_path:
         return jsonify({'error': 'No path provided'}), 400
@@ -73,50 +63,72 @@ def add_folder():
     if not os.path.isdir(folder_path):
         return jsonify({'error': 'Path is not a directory'}), 400
 
-    if folder_path not in app.config['watched_folders']:
-        app.config['watched_folders'].append(folder_path)
-        save_watched_folders(app.config['watched_folders'])
+    pm = app.config['project_manager']
+    project = pm.add_project(folder_path, title, description)
 
-        # Start watching the folder
-        watcher = FolderWatcher(folder_path)
-        app.config['watchers'][folder_path] = watcher
-        watcher.start()
+    # Start watching the folder
+    watcher = FolderWatcher(folder_path)
+    app.config['watchers'][project.project_id] = watcher
+    watcher.start()
 
-    return jsonify({'success': True, 'path': folder_path})
+    return jsonify({'success': True, 'project': project.to_dict()})
 
 
-@app.route('/api/folders/<path:folder_path>', methods=['DELETE'])
-def remove_folder(folder_path):
-    """Remove a folder from watch list."""
-    folder_path = '/' + folder_path
+@app.route('/api/projects/<project_id>', methods=['PUT'])
+def update_project(project_id):
+    """Update a project."""
+    data = request.json
+    pm = app.config['project_manager']
 
-    if folder_path in app.config['watched_folders']:
-        app.config['watched_folders'].remove(folder_path)
-        save_watched_folders(app.config['watched_folders'])
+    project = pm.update_project(
+        project_id,
+        title=data.get('title'),
+        description=data.get('description'),
+        path=data.get('path')
+    )
 
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    return jsonify({'success': True, 'project': project.to_dict()})
+
+
+@app.route('/api/projects/<project_id>', methods=['DELETE'])
+def remove_project(project_id):
+    """Remove a project."""
+    pm = app.config['project_manager']
+
+    if pm.remove_project(project_id):
         # Stop watching the folder
-        if folder_path in app.config['watchers']:
-            app.config['watchers'][folder_path].stop()
-            del app.config['watchers'][folder_path]
+        if project_id in app.config['watchers']:
+            app.config['watchers'][project_id].stop()
+            del app.config['watchers'][project_id]
 
         return jsonify({'success': True})
 
-    return jsonify({'error': 'Folder not found'}), 404
+    return jsonify({'error': 'Project not found'}), 404
 
 
-@app.route('/api/browse/<path:folder_path>')
-def browse_folder(folder_path):
-    """Get directory structure for a folder."""
-    folder_path = '/' + folder_path
+@app.route('/api/projects/<project_identifier>/browse')
+@app.route('/api/projects/<project_identifier>/browse/<path:subpath>')
+def browse_project(project_identifier, subpath=''):
+    """Get directory structure for a project."""
+    pm = app.config['project_manager']
 
-    if folder_path not in app.config['watched_folders']:
-        return jsonify({'error': 'Folder not being watched'}), 403
+    # Try to get project by ID or slug
+    project = pm.get_project(project_identifier)
+    if not project:
+        project = pm.get_project_by_slug(project_identifier)
+
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    folder_path = Path(project.path) / subpath if subpath else Path(project.path)
 
     try:
         items = []
-        path_obj = Path(folder_path)
 
-        for item in path_obj.iterdir():
+        for item in folder_path.iterdir():
             if item.is_file():
                 # Only include supported file types
                 if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml']:
@@ -150,10 +162,14 @@ def get_file_tree(file_path):
     """Get tree structure of a file's contents."""
     file_path = '/' + file_path
 
-    # Check if file is in a watched folder
-    is_watched = any(file_path.startswith(watched) for watched in app.config['watched_folders'])
+    # Check if file is in a watched project
+    pm = app.config['project_manager']
+    is_watched = any(
+        file_path.startswith(project.path)
+        for project in pm.get_all_projects()
+    )
     if not is_watched:
-        return jsonify({'error': 'File not in watched folder'}), 403
+        return jsonify({'error': 'File not in watched project'}), 403
 
     try:
         parser = FileParser(file_path)
@@ -178,21 +194,31 @@ def get_file_tree(file_path):
 
 def main():
     """Main entry point."""
-    # Load watched folders
-    app.config['watched_folders'] = load_watched_folders()
+    # Initialize project manager
+    config_file = app.config['config_file']
 
-    # Start watchers for existing folders
-    for folder in app.config['watched_folders']:
-        if os.path.isdir(folder):
-            watcher = FolderWatcher(folder)
-            app.config['watchers'][folder] = watcher
+    # Check for old format and migrate
+    old_config = Path.home() / '.fileviewer' / 'watched_folders.json'
+    if old_config.exists() and not config_file.exists():
+        # Migrate old config to new location
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        old_config.rename(config_file)
+
+    pm = ProjectManager(config_file)
+    app.config['project_manager'] = pm
+
+    # Start watchers for existing projects
+    for project in pm.get_all_projects():
+        if os.path.isdir(project.path):
+            watcher = FolderWatcher(project.path)
+            app.config['watchers'][project.project_id] = watcher
             watcher.start()
 
     # Find free port
     port = find_free_port()
 
     print(f"Starting File Viewer on http://localhost:{port}")
-    print(f"Watching {len(app.config['watched_folders'])} folders")
+    print(f"Watching {len(pm.get_all_projects())} projects")
 
     try:
         app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)
