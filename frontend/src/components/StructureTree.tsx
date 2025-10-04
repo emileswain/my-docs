@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { TreeNode } from '../types';
 import { useStore } from '../store/useStore';
 
@@ -12,10 +13,21 @@ function StructureTreeNode({ node, depth, onSectionClick, currentHeading }: Stru
   const hasChildren = node.children && node.children.length > 0;
   const indent = depth * 12;
   const isActive = currentHeading === node.label;
+  const nodeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isActive && nodeRef.current) {
+      nodeRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [isActive]);
 
   return (
     <div className="mb-1">
       <div
+        ref={nodeRef}
         className={`structure-tree-item py-1 px-2 rounded flex items-center cursor-pointer hover:bg-gray-100 ${
           isActive ? 'bg-blue-100 font-semibold' : ''
         }`}
