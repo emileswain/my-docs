@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import ReactJson from '@microlink/react-json-view';
 
 interface FileViewerProps {
   contentAreaRef: React.RefObject<HTMLDivElement | null>;
@@ -163,11 +164,16 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
 
     if (extension === '.json') {
       try {
-        const formatted = JSON.stringify(JSON.parse(currentFileContent.content), null, 2);
+        const jsonData = JSON.parse(currentFileContent.content);
         return (
-          <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
-            <code className="language-json">{formatted}</code>
-          </pre>
+          <ReactJson
+            src={jsonData}
+            theme="rjv-default"
+            collapsed={2}
+            displayDataTypes={false}
+            enableClipboard={true}
+            style={{ fontSize: '14px' }}
+          />
         );
       } catch {
         return (
