@@ -35,7 +35,12 @@ body {
     width: 16rem;
 }
 
-.content-area {
-    flex: 1;
-    overflow-y: auto;
+#contentArea pre {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+#contentArea code {
+    word-wrap: normal;
+    white-space: pre;
 }

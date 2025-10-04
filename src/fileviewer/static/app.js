@@ -59,6 +59,12 @@ function setupEventListeners() {
     document.getElementById('expandAllBtn').addEventListener('click', () => changeDepth(10));
     document.getElementById('collapseAllBtn').addEventListener('click', () => changeDepth(1));
 
+    // Panel toggles
+    document.getElementById('toggleLeftBtn').addEventListener('click', () => togglePanel('left', false));
+    document.getElementById('showLeftBtn').addEventListener('click', () => togglePanel('left', true));
+    document.getElementById('toggleRightBtn').addEventListener('click', () => togglePanel('right', false));
+    document.getElementById('showRightBtn').addEventListener('click', () => togglePanel('right', true));
+
     // Prevent clicks inside panels from closing them
     document.getElementById('folderDropdown').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -68,6 +74,47 @@ function setupEventListeners() {
     document.addEventListener('click', () => {
         document.getElementById('folderDropdown').classList.add('hidden');
     });
+
+    // Save scroll position periodically
+    const contentArea = document.getElementById('contentArea');
+    contentArea.addEventListener('scroll', () => {
+        if (currentFile) {
+            localStorage.setItem('scrollPosition', contentArea.scrollTop);
+        }
+    });
+
+    // Restore panel states
+    restorePanelStates();
+}
+
+// Toggle panel visibility
+function togglePanel(side, show) {
+    const panel = document.getElementById(`${side}Panel`);
+    const toggle = document.getElementById(`${side}PanelToggle`);
+
+    if (show) {
+        panel.classList.remove('hidden');
+        toggle.classList.add('hidden');
+    } else {
+        panel.classList.add('hidden');
+        toggle.classList.remove('hidden');
+    }
+
+    // Save state
+    localStorage.setItem(`${side}PanelVisible`, show);
+}
+
+// Restore panel states from localStorage
+function restorePanelStates() {
+    const leftVisible = localStorage.getItem('leftPanelVisible');
+    const rightVisible = localStorage.getItem('rightPanelVisible');
+
+    if (leftVisible === 'false') {
+        togglePanel('left', false);
+    }
+    if (rightVisible === 'false') {
+        togglePanel('right', false);
+    }
 }
 
 // Toggle project dropdown
@@ -289,19 +336,25 @@ async function selectFile(path, name) {
 // Render file content
 function renderFileContent(data, name, path) {
     const contentArea = document.getElementById('contentArea');
+    const fileHeader = document.getElementById('fileHeader');
+    const fileName = document.getElementById('fileName');
+    const headerActions = document.getElementById('headerActions');
     const extension = path.substring(path.lastIndexOf('.')).toLowerCase();
 
     // Store current file data for toggle functionality
     currentFileData = { data, name, path };
 
+    // Update header (always visible now)
+    fileName.textContent = name;
+
     let renderedContent = '';
 
     if (showRaw) {
         // Always show raw content when toggle is on
-        renderedContent = `<pre class="bg-gray-50 p-4 rounded overflow-x-auto"><code>${escapeHtml(data.content)}</code></pre>`;
+        renderedContent = `<pre class="bg-gray-50 p-4 rounded overflow-x-auto max-w-full"><code>${escapeHtml(data.content)}</code></pre>`;
     } else if (extension === '.md' && data.html) {
         // Render markdown as HTML
-        renderedContent = `<div class="prose prose-slate max-w-none">${data.html}</div>`;
+        renderedContent = `<div id="markdownContent" class="prose prose-slate max-w-none">${data.html}</div>`;
     } else if (extension === '.json') {
         // Pretty print JSON
         try {
@@ -315,25 +368,32 @@ function renderFileContent(data, name, path) {
     }
 
     // Add toggle button for markdown files
-    const toggleButton = (extension === '.md' && data.html) ? `
-        <button id="toggleViewBtn" onclick="toggleView()" class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded">
-            <i class="fas fa-${showRaw ? 'eye' : 'code'} mr-1"></i>
-            ${showRaw ? 'Show Rendered' : 'Show Raw'}
-        </button>
-    ` : '';
+    if (extension === '.md' && data.html) {
+        headerActions.innerHTML = `
+            <button id="toggleViewBtn" onclick="toggleView()" class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded">
+                <i class="fas fa-${showRaw ? 'eye' : 'code'} mr-1"></i>
+                ${showRaw ? 'Show Rendered' : 'Show Raw'}
+            </button>
+        `;
+    } else {
+        headerActions.innerHTML = '';
+    }
 
-    contentArea.innerHTML = `
-        <div>
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h2 class="text-2xl font-bold mb-1">${name}</h2>
-                    <p class="text-sm text-gray-500">${path}</p>
-                </div>
-                ${toggleButton}
-            </div>
-            ${renderedContent}
-        </div>
-    `;
+    // Render content
+    contentArea.innerHTML = renderedContent;
+
+    // Set up scroll tracking for markdown headers
+    if (extension === '.md' && data.html && !showRaw) {
+        setTimeout(() => setupHeaderTracking(), 100);
+    }
+
+    // Restore scroll position
+    setTimeout(() => {
+        const savedScroll = localStorage.getItem('scrollPosition');
+        if (savedScroll) {
+            contentArea.scrollTop = parseInt(savedScroll);
+        }
+    }, 150);
 }
 
 // Toggle between rendered and raw view
@@ -402,6 +462,74 @@ function changeDepth(newDepth) {
         // Reload structure tree with new depth
         selectFile(currentFile, currentFile.split('/').pop());
     }
+}
+
+// Global scroll handler reference for cleanup
+let currentScrollHandler = null;
+
+// Setup header tracking for markdown files
+function setupHeaderTracking() {
+    const markdownContent = document.getElementById('markdownContent');
+    const currentHeadingElement = document.getElementById('currentHeading');
+    const contentArea = document.getElementById('contentArea');
+
+    if (!markdownContent || !currentHeadingElement || !contentArea) {
+        console.log('Missing elements for header tracking');
+        return;
+    }
+
+    // Get all headings in the markdown content
+    const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+    if (headings.length === 0) {
+        console.log('No headings found in markdown content');
+        return;
+    }
+
+    console.log(`Found ${headings.length} headings`);
+
+    // Remove old scroll listener if exists
+    if (currentScrollHandler) {
+        contentArea.removeEventListener('scroll', currentScrollHandler);
+    }
+
+    // Track current heading on scroll
+    function updateCurrentHeading() {
+        const contentAreaRect = contentArea.getBoundingClientRect();
+        const contentAreaTop = contentAreaRect.top;
+
+        let currentHeading = null;
+
+        // Find the last heading that's scrolled past the content area top
+        headings.forEach(heading => {
+            const headingRect = heading.getBoundingClientRect();
+            // Check if heading has scrolled past the top of the content area
+            if (headingRect.top <= contentAreaTop + 20) {
+                currentHeading = heading;
+            }
+        });
+
+        // Update the display
+        if (currentHeading) {
+            currentHeadingElement.textContent = currentHeading.textContent;
+        } else {
+            currentHeadingElement.textContent = '';
+        }
+    }
+
+    // Listen to scroll events on the panel with throttling
+    let scrollTimeout;
+    currentScrollHandler = () => {
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+        }
+        scrollTimeout = setTimeout(updateCurrentHeading, 50);
+    };
+
+    contentArea.addEventListener('scroll', currentScrollHandler);
+
+    // Initial update
+    updateCurrentHeading();
 }
 
 // Escape HTML

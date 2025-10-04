@@ -37,16 +37,40 @@
     <!-- Main Content Area -->
     <div class="main-content flex">
         <!-- Left Panel: File Browser -->
-        <div class="w-1/4 bg-white border-r border-gray-200 panel p-4">
-            <h2 class="text-sm font-semibold text-gray-600 mb-4 uppercase">Files</h2>
+        <div id="leftPanel" class="bg-white border-r border-gray-200 panel p-4" style="min-width: 200px; width: 300px;">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-semibold text-gray-600 uppercase">Files</h2>
+                <button id="toggleLeftBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Hide Panel">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
             <div id="fileTree" class="text-sm">
                 <p class="text-gray-400 italic">Select a project to browse</p>
             </div>
         </div>
 
-        <!-- Center Panel: Content Tree -->
-        <div class="flex-1 bg-white panel p-6">
-            <div id="contentArea">
+        <!-- Left Panel Toggle (when hidden) -->
+        <div id="leftPanelToggle" class="hidden bg-white border-r border-gray-200 flex items-start p-2">
+            <button id="showLeftBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Show Files">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- Center Panel: Content Viewer -->
+        <div class="flex-1 bg-white flex flex-col min-w-0">
+            <!-- Fixed Header Bar -->
+            <div id="fileHeader" class="border-b border-gray-200 px-6 bg-white" style="height: 70px;">
+                <div class="flex items-center justify-between h-full">
+                    <div class="flex-1 min-w-0">
+                        <h2 id="fileName" class="text-lg font-bold truncate"></h2>
+                        <p id="currentHeading" class="text-xs text-gray-500 truncate"></p>
+                    </div>
+                    <div id="headerActions" class="ml-4 flex-shrink-0"></div>
+                </div>
+            </div>
+
+            <!-- Scrollable Content Area -->
+            <div id="contentArea" class="flex-1 overflow-y-auto p-6">
                 <div class="flex items-center justify-center h-full text-gray-400">
                     <div class="text-center">
                         <i class="fas fa-file-alt text-6xl mb-4"></i>
@@ -56,8 +80,15 @@
             </div>
         </div>
 
+        <!-- Right Panel Toggle (when hidden) -->
+        <div id="rightPanelToggle" class="hidden bg-white border-l border-gray-200 flex items-start p-2">
+            <button id="showRightBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Show Structure">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+
         <!-- Right Panel: Content Tree Details -->
-        <div class="w-1/4 bg-white border-l border-gray-200 panel p-4">
+        <div id="rightPanel" class="bg-white border-l border-gray-200 panel p-4" style="min-width: 200px; width: 300px;">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-sm font-semibold text-gray-600 uppercase">Structure</h2>
                 <div class="flex space-x-2">
@@ -66,6 +97,9 @@
                     </button>
                     <button id="collapseAllBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Collapse All">
                         <i class="fas fa-minus-circle"></i>
+                    </button>
+                    <button id="toggleRightBtn" class="p-1 text-gray-600 hover:text-gray-800" title="Hide Panel">
+                        <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
