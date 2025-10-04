@@ -1,0 +1,339 @@
+{
+  "company": {
+    "name": "Lorem Industries Inc.",
+    "tagline": "Innovating the future of ipsum",
+    "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    "founded": 2015,
+    "headquarters": {
+      "country": "United States",
+      "state": "California",
+      "city": "San Francisco",
+      "address": {
+        "street": "123 Lorem Street",
+        "suite": "Suite 456",
+        "zipCode": "94102"
+      }
+    },
+    "departments": {
+      "engineering": {
+        "headCount": 150,
+        "manager": "John Doe",
+        "teams": {
+          "frontend": {
+            "members": 45,
+            "technologies": ["React", "Vue", "Angular"],
+            "projects": ["Dashboard", "Mobile App", "Admin Panel"]
+          },
+          "backend": {
+            "members": 60,
+            "technologies": ["Node.js", "Python", "Go"],
+            "projects": ["API Gateway", "Microservices", "Data Pipeline"]
+          },
+          "devops": {
+            "members": 45,
+            "technologies": ["Kubernetes", "Docker", "Terraform"],
+            "projects": ["CI/CD", "Infrastructure", "Monitoring"]
+          }
+        }
+      },
+      "marketing": {
+        "headCount": 75,
+        "manager": "Jane Smith",
+        "teams": {
+          "digital": {
+            "members": 30,
+            "channels": ["Social Media", "Email", "SEO"],
+            "campaigns": ["Summer Sale", "Product Launch", "Brand Awareness"]
+          },
+          "content": {
+            "members": 25,
+            "types": ["Blog Posts", "Videos", "Infographics"],
+            "platforms": ["Website", "YouTube", "Medium"]
+          },
+          "analytics": {
+            "members": 20,
+            "tools": ["Google Analytics", "Mixpanel", "Tableau"],
+            "metrics": ["Conversion Rate", "User Engagement", "ROI"]
+          }
+        }
+      }
+    }
+  },
+  "products": [
+    {
+      "id": "prod-001",
+      "title": "UltraWidget Pro",
+      "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante.",
+      "price": 299.99,
+      "currency": "USD",
+      "category": "Electronics",
+      "specifications": {
+        "dimensions": {
+          "width": 10.5,
+          "height": 8.3,
+          "depth": 2.1,
+          "unit": "inches"
+        },
+        "weight": {
+          "value": 1.2,
+          "unit": "pounds"
+        },
+        "features": [
+          "Wireless connectivity",
+          "Long battery life",
+          "Premium materials",
+          "Water resistant"
+        ]
+      },
+      "inventory": {
+        "inStock": true,
+        "quantity": 1250,
+        "warehouses": {
+          "west": {
+            "location": "San Francisco",
+            "quantity": 450
+          },
+          "central": {
+            "location": "Chicago",
+            "quantity": 400
+          },
+          "east": {
+            "location": "New York",
+            "quantity": 400
+          }
+        }
+      },
+      "reviews": {
+        "averageRating": 4.7,
+        "totalReviews": 892,
+        "distribution": {
+          "5star": 650,
+          "4star": 180,
+          "3star": 45,
+          "2star": 12,
+          "1star": 5
+        }
+      }
+    },
+    {
+      "id": "prod-002",
+      "title": "SmartGadget X",
+      "description": "Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae.",
+      "price": 149.99,
+      "currency": "USD",
+      "category": "Smart Home",
+      "specifications": {
+        "dimensions": {
+          "width": 5.5,
+          "height": 5.5,
+          "depth": 1.5,
+          "unit": "inches"
+        },
+        "weight": {
+          "value": 0.6,
+          "unit": "pounds"
+        },
+        "features": [
+          "Voice control",
+          "App integration",
+          "Energy efficient",
+          "Easy installation"
+        ]
+      },
+      "inventory": {
+        "inStock": true,
+        "quantity": 3420,
+        "warehouses": {
+          "west": {
+            "location": "San Francisco",
+            "quantity": 1200
+          },
+          "central": {
+            "location": "Chicago",
+            "quantity": 1100
+          },
+          "east": {
+            "location": "New York",
+            "quantity": 1120
+          }
+        }
+      },
+      "reviews": {
+        "averageRating": 4.5,
+        "totalReviews": 1523,
+        "distribution": {
+          "5star": 980,
+          "4star": 420,
+          "3star": 85,
+          "2star": 28,
+          "1star": 10
+        }
+      }
+    },
+    {
+      "id": "prod-003",
+      "title": "MaxiTool Deluxe",
+      "description": "Ornare suspendisse sed nisi lacus sed viverra tellus. Risus feugiat in ante metus dictum at tempor commodo. Pellentesque eu tincidunt tortor aliquam nulla facilisi cras fermentum odio. Mauris rhoncus aenean vel elit scelerisque.",
+      "price": 89.99,
+      "currency": "USD",
+      "category": "Tools & Hardware",
+      "specifications": {
+        "dimensions": {
+          "width": 12.0,
+          "height": 4.5,
+          "depth": 3.0,
+          "unit": "inches"
+        },
+        "weight": {
+          "value": 2.8,
+          "unit": "pounds"
+        },
+        "features": [
+          "Ergonomic design",
+          "Durable construction",
+          "Multi-purpose use",
+          "Lifetime warranty"
+        ]
+      },
+      "inventory": {
+        "inStock": true,
+        "quantity": 890,
+        "warehouses": {
+          "west": {
+            "location": "San Francisco",
+            "quantity": 290
+          },
+          "central": {
+            "location": "Chicago",
+            "quantity": 300
+          },
+          "east": {
+            "location": "New York",
+            "quantity": 300
+          }
+        }
+      },
+      "reviews": {
+        "averageRating": 4.8,
+        "totalReviews": 456,
+        "distribution": {
+          "5star": 350,
+          "4star": 85,
+          "3star": 15,
+          "2star": 4,
+          "1star": 2
+        }
+      }
+    },
+    {
+      "id": "prod-004",
+      "title": "ProStream HD",
+      "description": "Vitae congue eu consequat ac felis donec et odio pellentesque diam. Elementum tempus egestas sed sed risus pretium quam vulputate. Sed viverra ipsum nunc aliquet bibendum enim facilisis gravida neque convallis.",
+      "price": 449.99,
+      "currency": "USD",
+      "category": "Audio/Video",
+      "specifications": {
+        "dimensions": {
+          "width": 15.5,
+          "height": 9.2,
+          "depth": 4.8,
+          "unit": "inches"
+        },
+        "weight": {
+          "value": 3.5,
+          "unit": "pounds"
+        },
+        "features": [
+          "4K resolution",
+          "Dolby Atmos support",
+          "HDR compatibility",
+          "Streaming apps built-in"
+        ]
+      },
+      "inventory": {
+        "inStock": false,
+        "quantity": 0,
+        "warehouses": {
+          "west": {
+            "location": "San Francisco",
+            "quantity": 0
+          },
+          "central": {
+            "location": "Chicago",
+            "quantity": 0
+          },
+          "east": {
+            "location": "New York",
+            "quantity": 0
+          }
+        }
+      },
+      "reviews": {
+        "averageRating": 4.9,
+        "totalReviews": 2341,
+        "distribution": {
+          "5star": 2100,
+          "4star": 200,
+          "3star": 30,
+          "2star": 8,
+          "1star": 3
+        }
+      }
+    },
+    {
+      "id": "prod-005",
+      "title": "ComfortChair Elite",
+      "description": "Augue lacus viverra vitae congue eu consequat ac felis. Scelerisque eleifend donec pretium vulputate sapien nec sagittis aliquam. Ultrices neque ornare aenean euismod elementum nisi quis eleifend quam adipiscing.",
+      "price": 699.99,
+      "currency": "USD",
+      "category": "Furniture",
+      "specifications": {
+        "dimensions": {
+          "width": 28.0,
+          "height": 42.0,
+          "depth": 30.0,
+          "unit": "inches"
+        },
+        "weight": {
+          "value": 45.0,
+          "unit": "pounds"
+        },
+        "features": [
+          "Ergonomic lumbar support",
+          "Adjustable armrests",
+          "Premium leather",
+          "360-degree swivel"
+        ]
+      },
+      "inventory": {
+        "inStock": true,
+        "quantity": 156,
+        "warehouses": {
+          "west": {
+            "location": "San Francisco",
+            "quantity": 52
+          },
+          "central": {
+            "location": "Chicago",
+            "quantity": 54
+          },
+          "east": {
+            "location": "New York",
+            "quantity": 50
+          }
+        }
+      },
+      "reviews": {
+        "averageRating": 4.6,
+        "totalReviews": 678,
+        "distribution": {
+          "5star": 480,
+          "4star": 150,
+          "3star": 35,
+          "2star": 10,
+          "1star": 3
+        }
+      }
+    }
+  ]
+}
