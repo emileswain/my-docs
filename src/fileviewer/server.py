@@ -193,7 +193,9 @@ def get_file_tree(file_path):
         html_content = None
         if file_path.endswith('.md'):
             md = markdown.Markdown(extensions=['fenced_code', 'tables'])
-            html_content = md.convert(content)
+            raw_html = md.convert(content)
+            # Add copy button to code blocks
+            html_content = raw_html.replace('<pre>', '<pre><span class="copy-icon">Copy</span>')
 
         return jsonify({
             'tree': tree,

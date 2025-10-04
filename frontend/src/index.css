@@ -40,32 +40,27 @@ code {
 }
 
 /* Copy button for code blocks */
-.code-block-wrapper {
+pre {
   position: relative;
-  margin: 1rem 0;
 }
 
-.copy-code-btn {
+.copy-icon {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  background: #4a5568;
-  color: white;
-  border: none;
-  border-radius: 4px;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
+  user-select: none;
+  background: #4a5568;
+  color: white;
+  border-radius: 4px;
 }
 
-.code-block-wrapper:hover .copy-code-btn {
+pre:hover .copy-icon {
   opacity: 1;
-}
-
-.copy-code-btn.copied {
-  background: #48bb78;
 }
 
 /* Tree item styles */

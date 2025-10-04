@@ -13,20 +13,20 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
   const setShowRaw = useStore((state) => state.setShowRaw);
   const setCurrentHeading = useStore((state) => state.setCurrentHeading);
   const currentHeading = useStore((state) => state.currentHeading);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const scrollHandlerRef = useRef<(() => void) | null>(null);
 
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
   const isMarkdown = extension === '.md' && currentFileContent?.html;
 
   useEffect(() => {
     if (isMarkdown && !showRaw && contentAreaRef.current) {
-      addCopyButtonsToCodeBlocks();
       setupHeaderTracking();
+      setupCopyButtons();
 
       return () => {
-        // Cleanup observer
-        if (observerRef.current) {
-          observerRef.current.disconnect();
+        // Cleanup scroll handler
+        if (scrollHandlerRef.current && contentAreaRef.current) {
+          contentAreaRef.current.removeEventListener('scroll', scrollHandlerRef.current);
         }
       };
     }
@@ -80,73 +80,61 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
       }
     };
 
+    // Remove old scroll listener
+    if (scrollHandlerRef.current) {
+      contentArea.removeEventListener('scroll', scrollHandlerRef.current);
+    }
+
     // Scroll handler with position saving
-    const scrollHandler = () => {
+    scrollHandlerRef.current = () => {
       if (currentFile) {
         localStorage.setItem('scrollPosition', String(contentArea.scrollTop));
       }
       updateCurrentHeading();
     };
 
-    contentArea.addEventListener('scroll', scrollHandler);
+    contentArea.addEventListener('scroll', scrollHandlerRef.current);
 
     // Initial update
     updateCurrentHeading();
   };
 
-  const addCopyButtonsToCodeBlocks = () => {
-    const markdownContent = contentAreaRef.current?.querySelector('#markdownContent');
-    if (!markdownContent) return;
+  const setupCopyButtons = () => {
+    const contentArea = contentAreaRef.current;
+    if (!contentArea) return;
 
-    const codeBlocks = markdownContent.querySelectorAll('pre');
+    // Use event delegation on the content area (which doesn't get re-rendered)
+    const handleCopyClick = (e: Event) => {
+      const target = e.target as HTMLElement;
 
-    codeBlocks.forEach((pre) => {
-      // Skip if already has a copy button
-      if (pre.parentElement?.classList.contains('code-block-wrapper')) return;
+      // Find the closest pre element
+      const pre = target.closest('pre');
+      if (pre && target.classList.contains('copy-icon')) {
+        e.preventDefault();
+        e.stopPropagation();
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'code-block-wrapper';
+        const code = pre.querySelector('code') || pre;
+        const text = code.textContent || '';
 
-      const button = document.createElement('button');
-      button.className = 'copy-code-btn';
-      button.textContent = 'Copy';
-      button.onclick = () => copyCode(button);
-
-      pre.parentNode?.insertBefore(wrapper, pre);
-      wrapper.appendChild(button);
-      wrapper.appendChild(pre);
-    });
-  };
-
-  const copyCode = (button: HTMLButtonElement) => {
-    const wrapper = button.parentElement;
-    const pre = wrapper?.querySelector('pre');
-    const code = pre?.querySelector('code') || pre;
-
-    if (!code) return;
-
-    const text = code.textContent || '';
-
-    navigator.clipboard.writeText(text).then(
-      () => {
-        const originalText = button.textContent;
-        button.textContent = 'Copied!';
-        button.classList.add('copied');
-
-        setTimeout(() => {
-          button.textContent = originalText || 'Copy';
-          button.classList.remove('copied');
-        }, 2000);
-      },
-      (err) => {
-        console.error('Failed to copy code:', err);
-        button.textContent = 'Failed';
-        setTimeout(() => {
-          button.textContent = 'Copy';
-        }, 2000);
+        navigator.clipboard.writeText(text).then(
+          () => {
+            target.textContent = 'Copied';
+            target.style.background = '#48bb78';
+            setTimeout(() => {
+              target.textContent = 'Copy';
+              target.style.background = '';
+            }, 2000);
+          },
+          (err) => {
+            console.error('Failed to copy:', err);
+          }
+        );
       }
-    );
+    };
+
+    contentArea.addEventListener('click', handleCopyClick);
   };
+
 
   const toggleView = () => {
     setShowRaw(!showRaw);
