@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { MermaidViewer } from './MermaidViewer';
+import { MermaidModal } from './MermaidModal';
 
 interface MarkdownViewerProps {
   html: string;
@@ -205,78 +206,11 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
 
       {/* Fullscreen Mermaid Modal */}
       {fullscreenMermaid && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'var(--bg-primary)',
-            zIndex: 9999,
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          {/* Top Bar */}
-          <div
-            style={{
-              padding: '1rem 2rem',
-              backgroundColor: 'var(--bg-secondary)',
-              borderBottom: '1px solid var(--border-primary)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Mermaid Diagram</h3>
-            <button
-              onClick={() => setFullscreenMermaid(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-primary)',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                padding: '0.5rem 1rem'
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Diagram Area */}
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <MermaidViewer content={fullscreenMermaid.content} darkMode={darkMode} interactive={true} />
-          </div>
-
-          {/* Bottom Bar */}
-          <div
-            style={{
-              padding: '1rem 2rem',
-              backgroundColor: 'var(--bg-secondary)',
-              borderTop: '1px solid var(--border-primary)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <button
-              onClick={() => setFullscreenMermaid(null)}
-              style={{
-                padding: '0.5rem 2rem',
-                backgroundColor: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-primary)',
-                borderRadius: '0.25rem',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                fontSize: '1rem'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <MermaidModal
+          content={fullscreenMermaid.content}
+          darkMode={darkMode}
+          onClose={() => setFullscreenMermaid(null)}
+        />
       )}
     </div>
   );
