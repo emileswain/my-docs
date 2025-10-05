@@ -192,9 +192,3 @@ The React frontend follows a clean separation of concerns pattern:
 - **Hooks** (Business logic layer) - Custom hooks containing application logic
 - **Services** (Data layer) - API calls and external service communication
 - **Stores** (State layer) - Global state management with Zustand
-
-This architecture is similar to Flutter's BLoC pattern and ensures:
-- High testability
-- Easy refactoring
-- Clear responsibilities
-- Reusable components
