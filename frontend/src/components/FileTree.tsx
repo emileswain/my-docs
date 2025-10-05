@@ -22,8 +22,8 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter, allI
   // Get children from cache
   const children = allItems.get(item.path) || [];
 
-  // Check if this item or any of its children match the filter
-  const itemMatches = !filter || fuzzyMatch(item.name, filter) || fuzzyMatch(item.path, filter);
+  // Check if this item matches the filter (only check filename, not path)
+  const itemMatches = !filter || fuzzyMatch(item.name, filter);
 
   // For folders, show if folder itself matches OR if it's in openFolders (meaning it has matching children)
   const shouldShowFolder = !filter || itemMatches || isOpen;
@@ -256,8 +256,8 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
 
       for (const item of folderItems) {
         if (item.type === 'file') {
-          // Check if file name or path matches
-          if (fuzzyMatch(item.name, filterText) || fuzzyMatch(item.path, filterText)) {
+          // Check if file name matches (not path, only filename)
+          if (fuzzyMatch(item.name, filterText)) {
             hasMatch = true;
             // Add all ancestor folders to expansion list
             ancestorPaths.forEach(path => {
@@ -295,12 +295,8 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     for (const item of items) {
       if (item.type === 'folder') {
         searchInFolder(item.path, [item.path]);
-      } else if (item.type === 'file') {
-        // Check top-level files too
-        if (fuzzyMatch(item.name, filterText) || fuzzyMatch(item.path, filterText)) {
-          // No folders to expand for top-level files
-        }
       }
+      // Top-level files don't need folder expansion
     }
 
     // Update open folders to include all folders with matches
@@ -440,15 +436,6 @@ function fuzzyMatch(str: string, pattern: string): boolean {
   str = str.toLowerCase();
   pattern = pattern.toLowerCase();
 
-  let patternIdx = 0;
-  let strIdx = 0;
-
-  while (strIdx < str.length && patternIdx < pattern.length) {
-    if (str[strIdx] === pattern[patternIdx]) {
-      patternIdx++;
-    }
-    strIdx++;
-  }
-
-  return patternIdx === pattern.length;
+  // Simple substring match - pattern must appear consecutively in the string
+  return str.includes(pattern);
 }
