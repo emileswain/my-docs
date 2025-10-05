@@ -2,10 +2,12 @@
 
 import os
 import socket
+import json
+import queue
 from pathlib import Path
 
 import markdown
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
 
 from .watcher import FolderWatcher
@@ -17,6 +19,7 @@ CORS(app)  # Enable CORS for development
 app.config['project_manager'] = None
 app.config['watchers'] = {}
 app.config['config_file'] = Path.home() / '.fileviewer' / 'projects.json'
+app.config['change_queues'] = []  # List of queues for SSE clients
 
 
 def find_free_port(start_port: int = 6060, max_attempts: int = 100) -> int:
@@ -29,6 +32,27 @@ def find_free_port(start_port: int = 6060, max_attempts: int = 100) -> int:
         except OSError:
             continue
     raise RuntimeError(f"Could not find a free port in range {start_port}-{start_port + max_attempts}")
+
+
+def broadcast_change(event_type: str, path: str, project_id: str):
+    """Broadcast a file change event to all connected SSE clients."""
+    message = {
+        'type': event_type,
+        'path': path,
+        'project_id': project_id
+    }
+
+    # Send to all connected clients
+    dead_queues = []
+    for q in app.config['change_queues']:
+        try:
+            q.put_nowait(message)
+        except queue.Full:
+            dead_queues.append(q)
+
+    # Remove dead queues
+    for q in dead_queues:
+        app.config['change_queues'].remove(q)
 
 
 
@@ -63,6 +87,7 @@ def get_projects():
 @app.route('/api/projects', methods=['POST'])
 def add_project():
     """Add a new project."""
+    from flask import request
     data = request.json
     folder_path = data.get('path')
     title = data.get('title')
@@ -79,8 +104,11 @@ def add_project():
     pm = app.config['project_manager']
     project = pm.add_project(folder_path, title, description)
 
-    # Start watching the folder
-    watcher = FolderWatcher(folder_path)
+    # Start watching the folder with callback
+    def on_change(event):
+        broadcast_change(event.event_type, event.src_path, project.project_id)
+
+    watcher = FolderWatcher(folder_path, callback=on_change)
     app.config['watchers'][project.project_id] = watcher
     watcher.start()
 
@@ -170,6 +198,35 @@ def browse_project(project_identifier, subpath=''):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/events')
+def stream_events():
+    """Server-Sent Events endpoint for file change notifications."""
+    def event_stream():
+        q = queue.Queue(maxsize=10)
+        app.config['change_queues'].append(q)
+
+        try:
+            while True:
+                try:
+                    message = q.get(timeout=30)  # 30 second timeout for heartbeat
+                    yield f"data: {json.dumps(message)}\n\n"
+                except queue.Empty:
+                    # Send heartbeat
+                    yield f": heartbeat\n\n"
+        finally:
+            if q in app.config['change_queues']:
+                app.config['change_queues'].remove(q)
+
+    return Response(
+        stream_with_context(event_stream()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+
 @app.route('/api/file/<path:file_path>')
 def get_file_tree(file_path):
     """Get tree structure of a file's contents."""
@@ -223,7 +280,13 @@ def main():
     # Start watchers for existing projects
     for project in pm.get_all_projects():
         if os.path.isdir(project.path):
-            watcher = FolderWatcher(project.path)
+            # Create callback for this project
+            def make_callback(proj_id):
+                def on_change(event):
+                    broadcast_change(event.event_type, event.src_path, proj_id)
+                return on_change
+
+            watcher = FolderWatcher(project.path, callback=make_callback(project.project_id))
             app.config['watchers'][project.project_id] = watcher
             watcher.start()
 

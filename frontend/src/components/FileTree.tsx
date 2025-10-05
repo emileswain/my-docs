@@ -179,6 +179,36 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     }
   }, [currentProject, loadProjectContents]);
 
+  // Listen for file system changes via Server-Sent Events
+  useEffect(() => {
+    if (!currentProject) return;
+
+    const eventSource = new EventSource('/api/events');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // Only refresh if the change is for the current project
+        if (data.project_id === currentProject.id) {
+          console.log('File system change detected, refreshing cache...', data);
+          loadProjectContents();
+        }
+      } catch (error) {
+        console.error('Error parsing SSE event:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [currentProject, loadProjectContents]);
+
   // Expand to show current file when it changes
   useEffect(() => {
     if (currentFile && currentProject && !filter) {

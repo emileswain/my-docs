@@ -26,12 +26,18 @@ class FolderEventHandler(FileSystemEventHandler):
         Args:
             event: The file system event
         """
-        if event.is_directory:
-            return
+        # Process both files and directories
+        is_relevant = False
 
-        # Only process supported file types
-        if event.src_path.endswith(('.md', '.json', '.yml', '.yaml')):
-            print(f"File change detected: {event.event_type} - {event.src_path}")
+        if event.is_directory:
+            # Always notify about directory changes
+            is_relevant = True
+        else:
+            # Only process supported file types
+            is_relevant = event.src_path.endswith(('.md', '.json', '.yml', '.yaml'))
+
+        if is_relevant:
+            print(f"{'Folder' if event.is_directory else 'File'} change detected: {event.event_type} - {event.src_path}")
             if self.callback:
                 self.callback(event)
 
