@@ -4,20 +4,22 @@ A modern web application for browsing and viewing markdown, JSON, and YAML files
 
 ## Features
 
-- Web-based file browser with live folder monitoring
+- Web-based file browser with real-time file system monitoring via SSE
 - Support for markdown, JSON, and YAML files
-- Tree-view content navigation with expandable depth control
-- Multiple folder watching capability
-- Modern React + TypeScript frontend
+- Tree-view content navigation for markdown files
+- Multiple project management
+- Modern React + TypeScript frontend with component-based architecture
 - Flask REST API backend
-- Modern Tailwind CSS interface
+- Tailwind CSS with custom theming (dark/light mode)
+- Separation of concerns following React best practices
 
 ## Architecture
 
-- **Frontend**: React + TypeScript + Vite (port 3000 in development)
+- **Frontend**: React + TypeScript + Vite (port 3030 in development)
 - **Backend**: Flask API server (port 6060)
+- **State Management**: Zustand (separate stores for UI and data)
 - **Development**: Vite proxy forwards `/api` requests to Flask
-- **Production**: Flask serves pre-built React static files
+- **Production**: Flask serves pre-built React static files from `static/dist/`
 
 ## Prerequisites
 
@@ -33,10 +35,8 @@ make install
 
 This will:
 - Create Python virtual environment with uv
-- Install Python dependencies (Flask, flask-cors, etc.)
-- Install Node.js dependencies for CSS compilation
-- Install Node.js dependencies for React frontend
-- Build Tailwind CSS
+- Install Python dependencies (Flask, flask-cors, watchdog, etc.)
+- Install Node.js dependencies for React frontend (Vite, React, Tailwind, etc.)
 
 ## Usage
 
@@ -49,11 +49,11 @@ make dev
 ```
 
 This will:
-1. Kill any existing processes on ports 3000 and 6060
-2. Start React dev server on http://localhost:3000
+1. Kill any existing processes on ports 3030 and 6060
+2. Start React dev server on http://localhost:3030
 3. Start Flask API server on http://localhost:6060
 
-Visit http://localhost:3000 to see the React app (API calls are proxied to Flask).
+Visit http://localhost:3030 to see the React app (API calls are proxied to Flask).
 
 ### Run Servers Individually
 
@@ -74,9 +74,8 @@ make run
 ```
 
 This will:
-1. Build the React app to `src/fileviewer/static/dist/`
-2. Build Tailwind CSS
-3. Start Flask server serving the built React app
+1. Build the React app to `frontend/dist/` and copy to `src/fileviewer/static/dist/`
+2. Start Flask server serving the built React app
 
 Visit http://localhost:6060 to see the production app.
 
@@ -91,10 +90,8 @@ Visit http://localhost:6060 to see the production app.
 - `make dev-frontend` - Run React dev server only
 - `make dev-backend` - Run Flask API server only
 - `make build` - Build React app for production
-- `make build-css` - Build Tailwind CSS
-- `make watch-css` - Watch and rebuild CSS on changes
 - `make run` - Run in production mode
-- `make kill-ports` - Kill any processes on ports 3000 and 6060
+- `make kill-ports` - Kill any processes on ports 3030 and 6060
 - `make clean` - Remove build artifacts and cache files
 - `make test` - Run tests
 - `make lint` - Run linting checks
@@ -104,27 +101,42 @@ Visit http://localhost:6060 to see the production app.
 
 ```
 .
-├── frontend/                 # React frontend
+├── frontend/                     # React frontend
 │   ├── src/
-│   │   ├── App.tsx          # Main React component
-│   │   ├── App.css          # Styles
-│   │   └── main.tsx         # Entry point
-│   ├── vite.config.ts       # Vite configuration (proxy settings)
+│   │   ├── components/           # React components
+│   │   │   ├── common/           # Reusable UI components (Dropdown, Modal, etc.)
+│   │   │   ├── admin/            # Admin-specific components
+│   │   │   ├── viewers/          # File viewer components (Markdown, JSON, YAML)
+│   │   │   ├── FileTree/         # File tree browser
+│   │   │   ├── Layout.tsx        # Main app layout
+│   │   │   └── Admin.tsx         # Admin page
+│   │   ├── hooks/                # Custom React hooks (business logic)
+│   │   │   ├── useProjects.ts    # Project CRUD operations
+│   │   │   ├── useFileTree.ts    # File tree state management
+│   │   │   ├── useFileContent.ts # File loading
+│   │   │   └── useFileSystemEvents.ts # SSE file watching
+│   │   ├── services/             # API service layer
+│   │   │   ├── projectService.ts # Project API calls
+│   │   │   ├── fileService.ts    # File API calls
+│   │   │   └── eventService.ts   # SSE connection management
+│   │   ├── store/                # Zustand state stores
+│   │   │   ├── useAppStore.ts    # UI state (theme, panels)
+│   │   │   ├── useProjectStore.ts # Data state (projects, files)
+│   │   │   └── useFileTreeStore.ts # File tree cache
+│   │   ├── types/                # TypeScript types
+│   │   ├── App.tsx               # Root component
+│   │   └── main.tsx              # Entry point
+│   ├── vite.config.ts            # Vite configuration (proxy to Flask)
 │   └── package.json
-├── src/fileviewer/          # Python backend
-│   ├── server.py            # Flask API server
-│   ├── project.py           # Project management
-│   ├── file_parser.py       # File parsing logic
-│   ├── watcher.py           # Folder monitoring
-│   ├── static/
-│   │   ├── dist/            # Built React app (production)
-│   │   ├── app.js           # Legacy vanilla JS (still available)
-│   │   └── output.css       # Compiled Tailwind CSS
-│   └── templates/
-│       ├── index.html       # Legacy template
-│       └── admin.html       # Admin panel
-├── Makefile                 # Build and run commands
-└── package.json             # Root Node.js dependencies
+├── src/fileviewer/               # Python backend
+│   ├── server.py                 # Flask API server
+│   ├── project.py                # Project management
+│   ├── file_parser.py            # File parsing (Markdown, JSON, YAML)
+│   ├── watcher.py                # File system monitoring with SSE
+│   └── static/
+│       └── dist/                 # Built React app (production)
+├── Makefile                      # Build and run commands
+└── pyproject.toml                # Python dependencies
 
 ```
 
@@ -132,17 +144,30 @@ Visit http://localhost:6060 to see the production app.
 
 The Flask backend provides the following REST API endpoints:
 
+### Projects
 - `GET /api/projects` - List all projects
-- `POST /api/projects` - Add a new project
+- `POST /api/projects` - Create a new project
 - `PUT /api/projects/<id>` - Update a project
-- `DELETE /api/projects/<id>` - Remove a project
-- `GET /api/projects/<id>/browse` - Browse project files
-- `GET /api/file/<path>` - Get file content and structure
+- `DELETE /api/projects/<id>` - Delete a project
 
-## Migration Notes
+### Files
+- `GET /api/projects/<project_id>/browse?path=<path>` - Browse files in a project directory
+- `GET /api/file?path=<path>` - Get file content and parsed structure
 
-The application now supports both:
-1. **React frontend** (development: port 3000, production: served by Flask)
-2. **Legacy vanilla JS frontend** (still available at `/admin` and templates)
+### Events
+- `GET /api/events` - Server-Sent Events endpoint for real-time file system changes
 
-You can gradually migrate features from vanilla JS to React while both remain functional.
+## Frontend Architecture
+
+The React frontend follows a clean separation of concerns pattern:
+
+- **Components** (UI layer) - Pure presentational components
+- **Hooks** (Business logic layer) - Custom hooks containing application logic
+- **Services** (Data layer) - API calls and external service communication
+- **Stores** (State layer) - Global state management with Zustand
+
+This architecture is similar to Flutter's BLoC pattern and ensures:
+- High testability
+- Easy refactoring
+- Clear responsibilities
+- Reusable components

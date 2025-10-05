@@ -1,73 +1,93 @@
-# React + TypeScript + Vite
+# File Viewer Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite frontend for the File Viewer application.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **Zustand** - State management
+- **Tailwind CSS** - Styling
+- **React Router** - Routing
+- **React Syntax Highlighter** - Code highlighting
 
-## React Compiler
+## Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The frontend follows a clean separation of concerns pattern:
 
-## Expanding the ESLint configuration
+### Layers
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Components** (`src/components/`)
+   - Pure presentational components
+   - No direct API calls or business logic
+   - Organized by feature (common, admin, viewers)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. **Hooks** (`src/hooks/`)
+   - Custom hooks containing business logic
+   - Bridge between components and services
+   - Examples: `useProjects`, `useFileTree`, `useFileContent`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. **Services** (`src/services/`)
+   - API calls and external service communication
+   - Class-based services (ProjectService, FileService, EventService)
+   - Single source of truth for API endpoints
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+4. **Stores** (`src/store/`)
+   - Global state management with Zustand
+   - Separated by concern (UI state vs data state)
+   - localStorage persistence for user preferences
+
+### Key Features
+
+- **Real-time updates** via Server-Sent Events (SSE)
+- **Theme support** with dark/light modes
+- **File tree caching** for fast navigation
+- **Type-safe** with TypeScript throughout
+
+## Development
+
+### Running Locally
+
+From the project root:
+```bash
+make dev-frontend  # Run frontend dev server only
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Or from the frontend directory:
+```bash
+npm run dev
+```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The dev server runs on http://localhost:3030 and proxies `/api` requests to the Flask backend at http://localhost:6060.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Building for Production
+
+From the project root:
+```bash
+make build
+```
+
+Or from the frontend directory:
+```bash
+npm run build
+```
+
+This builds the app to `dist/` which is then copied to the Flask backend's static directory.
+
+## Project Structure
+
+```
+src/
+├── components/           # React components
+│   ├── common/          # Reusable UI (Modal, Dropdown, Navigation, etc.)
+│   ├── admin/           # Admin page components
+│   ├── viewers/         # File viewers (Markdown, JSON, YAML)
+│   └── FileTree/        # File tree browser
+├── hooks/               # Custom hooks (business logic)
+├── services/            # API services
+├── store/               # Zustand stores
+├── types/               # TypeScript type definitions
+├── App.tsx              # Root component
+└── main.tsx             # Entry point
 ```
