@@ -1,13 +1,11 @@
 """Main Flask application server."""
 
-import json
 import os
 import socket
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import markdown
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
 from .watcher import FolderWatcher
@@ -37,19 +35,21 @@ def find_free_port(start_port: int = 6060, max_attempts: int = 100) -> int:
 
 @app.route('/')
 def index():
-    """Serve the main page."""
-    is_production = os.environ.get('FLASK_ENV') == 'production'
-    if is_production:
-        dist_dir = Path(__file__).parent / 'static' / 'dist'
-        if dist_dir.exists():
-            return send_from_directory(dist_dir, 'index.html')
-    return render_template('index.html')
+    """Serve the React frontend or redirect to dev server."""
+    from flask import redirect
 
+    # Check if we're in development mode
+    is_dev = os.environ.get('FLASK_ENV') != 'production'
 
-@app.route('/admin')
-def admin():
-    """Serve the admin page."""
-    return render_template('admin.html')
+    if is_dev:
+        # In development, redirect to Vite dev server
+        return redirect('http://localhost:3000')
+
+    # In production, serve the built frontend
+    dist_dir = Path(__file__).parent.parent.parent / 'frontend' / 'dist'
+    if dist_dir.exists():
+        return send_from_directory(dist_dir, 'index.html')
+    return jsonify({'error': 'Frontend not built. Run: cd frontend && npm run build'}), 500
 
 
 @app.route('/api/projects', methods=['GET'])
@@ -193,9 +193,7 @@ def get_file_tree(file_path):
         html_content = None
         if file_path.endswith('.md'):
             md = markdown.Markdown(extensions=['fenced_code', 'tables'])
-            raw_html = md.convert(content)
-            # Add copy button to code blocks
-            html_content = raw_html.replace('<pre>', '<pre><span class="copy-icon">Copy</span>')
+            html_content = md.convert(content)
 
         return jsonify({
             'tree': tree,
