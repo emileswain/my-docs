@@ -15,20 +15,7 @@ interface ProcessedContent {
 
 export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile }: MarkdownViewerProps) {
   const darkMode = useAppStore((state) => state.darkMode);
-  const [activeMermaidId, setActiveMermaidId] = useState<string | null>(null);
-
-  // Deactivate on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.mermaid-container')) {
-        setActiveMermaidId(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+  const [fullscreenMermaid, setFullscreenMermaid] = useState<{ content: string; id: string } | null>(null);
 
   // Extract mermaid blocks and split HTML
   const processedContent = useMemo((): ProcessedContent => {
@@ -189,7 +176,6 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
       {processedContent.parts.map((part, index) => {
         if (part.type === 'mermaid') {
           const diagramId = part.id || `mermaid-${index}`;
-          const isActive = activeMermaidId === diagramId;
 
           return (
             <div
@@ -200,16 +186,11 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
                 maxWidth: '800px',
                 aspectRatio: '4 / 3',
                 margin: '2rem auto',
-                cursor: isActive ? 'default' : 'pointer'
+                cursor: 'pointer'
               }}
-              onClick={(e) => {
-                if (!isActive) {
-                  e.stopPropagation();
-                  setActiveMermaidId(diagramId);
-                }
-              }}
+              onClick={() => setFullscreenMermaid({ content: part.content, id: diagramId })}
             >
-              <MermaidViewer content={part.content} darkMode={darkMode} interactive={isActive} />
+              <MermaidViewer content={part.content} darkMode={darkMode} interactive={false} />
             </div>
           );
         } else {
@@ -221,6 +202,82 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
           );
         }
       })}
+
+      {/* Fullscreen Mermaid Modal */}
+      {fullscreenMermaid && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'var(--bg-primary)',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          {/* Top Bar */}
+          <div
+            style={{
+              padding: '1rem 2rem',
+              backgroundColor: 'var(--bg-secondary)',
+              borderBottom: '1px solid var(--border-primary)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Mermaid Diagram</h3>
+            <button
+              onClick={() => setFullscreenMermaid(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                padding: '0.5rem 1rem'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Diagram Area */}
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <MermaidViewer content={fullscreenMermaid.content} darkMode={darkMode} interactive={true} />
+          </div>
+
+          {/* Bottom Bar */}
+          <div
+            style={{
+              padding: '1rem 2rem',
+              backgroundColor: 'var(--bg-secondary)',
+              borderTop: '1px solid var(--border-primary)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+          >
+            <button
+              onClick={() => setFullscreenMermaid(null)}
+              style={{
+                padding: '0.5rem 2rem',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: '0.25rem',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                fontSize: '1rem'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
