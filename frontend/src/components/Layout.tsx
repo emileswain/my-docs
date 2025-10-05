@@ -3,28 +3,32 @@ import { useSearchParams } from 'react-router-dom';
 import { FileTree } from './FileTree';
 import { FileViewer } from './FileViewer';
 import { StructureTree } from './StructureTree';
-import { useStore } from '../store/useStore';
-import { fetchProjects, fetchFileContent } from '../services/api';
-import { loadOpenFoldersFromStorage } from '../store/useStore';
+import { useProjectStore } from '../store/useProjectStore';
+import { useAppStore } from '../store/useAppStore';
+import { useProjects } from '../hooks/useProjects';
+import { useFileContent } from '../hooks/useFileContent';
+import { loadOpenFoldersFromStorage } from '../store/useProjectStore';
 
 export function Layout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const contentAreaRef = useRef<HTMLDivElement>(null);
 
-  const projects = useStore((state) => state.projects);
-  const currentProject = useStore((state) => state.currentProject);
-  const setProjects = useStore((state) => state.setProjects);
-  const setCurrentProject = useStore((state) => state.setCurrentProject);
-  const setCurrentFile = useStore((state) => state.setCurrentFile);
-  const setOpenFolders = useStore((state) => state.setOpenFolders);
-  const darkMode = useStore((state) => state.darkMode);
-  const setDarkMode = useStore((state) => state.setDarkMode);
+  const { projects, loadProjects } = useProjects();
+  const { loadFile } = useFileContent();
+
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const setCurrentProject = useProjectStore((state) => state.setCurrentProject);
+  const setCurrentFile = useProjectStore((state) => state.setCurrentFile);
+  const setOpenFolders = useProjectStore((state) => state.setOpenFolders);
+
+  const darkMode = useAppStore((state) => state.darkMode);
+  const setDarkMode = useAppStore((state) => state.setDarkMode);
 
   // Load projects on mount
   useEffect(() => {
-    loadProjectsData();
-  }, []);
+    loadProjects();
+  }, [loadProjects]);
 
   // Handle project selection from URL or localStorage
   useEffect(() => {
@@ -59,15 +63,6 @@ export function Layout() {
     }
   }, [currentProject]);
 
-  const loadProjectsData = async () => {
-    try {
-      const data = await fetchProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error('Error loading projects:', error);
-    }
-  };
-
   const selectProject = async (project: typeof projects[0], updateUrl = true) => {
     setCurrentProject(project);
     setIsDropdownOpen(false);
@@ -83,8 +78,7 @@ export function Layout() {
 
   const handleFileSelect = async (path: string, name: string) => {
     try {
-      const content = await fetchFileContent(path);
-      setCurrentFile(path, name, content);
+      await loadFile(path, name);
     } catch (error) {
       console.error('Error loading file:', error);
     }

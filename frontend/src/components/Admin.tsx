@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import type { Project } from '../types';
+import { useProjects } from '../hooks/useProjects';
 
 export function Admin() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, loadProjects, createProject, updateProject, deleteProject } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState({
@@ -13,17 +14,7 @@ export function Admin() {
 
   useEffect(() => {
     loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      const response = await fetch('/api/projects');
-      const data = await response.json();
-      setProjects(data);
-    } catch (error) {
-      console.error('Error loading projects:', error);
-    }
-  };
+  }, [loadProjects]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,32 +25,15 @@ export function Admin() {
     }
 
     try {
-      let response;
       if (editingProject) {
-        response = await fetch(`/api/projects/${editingProject.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
+        await updateProject(editingProject.id, formData);
       } else {
-        response = await fetch('/api/projects', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
+        await createProject(formData);
       }
-
-      const result = await response.json();
-
-      if (response.ok) {
-        closeModal();
-        await loadProjects();
-      } else {
-        alert(result.error || 'Failed to save project');
-      }
+      closeModal();
     } catch (error) {
-      console.error('Error saving project:', error);
-      alert('Failed to save project');
+      const message = error instanceof Error ? error.message : 'Failed to save project';
+      alert(message);
     }
   };
 
@@ -69,19 +43,10 @@ export function Admin() {
     }
 
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        await loadProjects();
-      } else {
-        const result = await response.json();
-        alert(result.error || 'Failed to delete project');
-      }
+      await deleteProject(project.id);
     } catch (error) {
-      console.error('Error deleting project:', error);
-      alert('Failed to delete project');
+      const message = error instanceof Error ? error.message : 'Failed to delete project';
+      alert(message);
     }
   };
 

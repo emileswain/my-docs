@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import type { Project, FileContent } from '../types';
 
-interface AppState {
+interface ProjectState {
   // Projects
   projects: Project[];
   currentProject: Project | null;
   setProjects: (projects: Project[]) => void;
   setCurrentProject: (project: Project | null) => void;
+  addProject: (project: Project) => void;
+  updateProject: (project: Project) => void;
+  removeProject: (id: string) => void;
 
   // Current file
   currentFile: string | null;
@@ -18,38 +21,30 @@ interface AppState {
   openFolders: Record<string, string[]>;
   setOpenFolders: (projectId: string, folders: string[]) => void;
   toggleFolder: (projectId: string, folderPath: string) => void;
-
-  // Panel visibility
-  leftPanelVisible: boolean;
-  rightPanelVisible: boolean;
-  setLeftPanelVisible: (visible: boolean) => void;
-  setRightPanelVisible: (visible: boolean) => void;
-
-  // View mode
-  showRaw: boolean;
-  setShowRaw: (show: boolean) => void;
-
-  // Current heading (for markdown files)
-  currentHeading: string;
-  setCurrentHeading: (heading: string) => void;
-
-  // Theme
-  darkMode: boolean;
-  setDarkMode: (dark: boolean) => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
   // Projects
   projects: [],
   currentProject: null,
   setProjects: (projects) => set({ projects }),
   setCurrentProject: (project) => {
     set({ currentProject: project });
-    // Save to localStorage
     if (project) {
       localStorage.setItem('currentProjectId', project.id);
     }
   },
+  addProject: (project) => set((state) => ({
+    projects: [...state.projects, project]
+  })),
+  updateProject: (project) => set((state) => ({
+    projects: state.projects.map(p => p.id === project.id ? project : p),
+    currentProject: state.currentProject?.id === project.id ? project : state.currentProject
+  })),
+  removeProject: (id) => set((state) => ({
+    projects: state.projects.filter(p => p.id !== id),
+    currentProject: state.currentProject?.id === id ? null : state.currentProject
+  })),
 
   // Current file
   currentFile: null,
@@ -60,9 +55,7 @@ export const useStore = create<AppState>((set, get) => ({
       currentFile: path,
       currentFileName: name,
       currentFileContent: content,
-      showRaw: false // Reset to rendered view
     });
-    // Save to localStorage
     if (path) {
       localStorage.setItem('currentFile', path);
     }
@@ -74,51 +67,18 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       openFolders: { ...state.openFolders, [projectId]: folders }
     }));
-    // Save to localStorage
     localStorage.setItem(`openFolders_${projectId}`, JSON.stringify(folders));
   },
   toggleFolder: (projectId, folderPath) => {
     const state = get();
     const projectFolders = state.openFolders[projectId] || [];
-    const index = projectFolders.indexOf(folderPath);
+    const isOpen = projectFolders.includes(folderPath);
 
-    let newFolders: string[];
-    if (index > -1) {
-      // Remove folder
-      newFolders = projectFolders.filter((f) => f !== folderPath);
-    } else {
-      // Add folder
-      newFolders = [...projectFolders, folderPath];
-    }
+    const newFolders = isOpen
+      ? projectFolders.filter((f) => f !== folderPath)
+      : [...projectFolders, folderPath];
 
     state.setOpenFolders(projectId, newFolders);
-  },
-
-  // Panel visibility
-  leftPanelVisible: localStorage.getItem('leftPanelVisible') !== 'false',
-  rightPanelVisible: localStorage.getItem('rightPanelVisible') !== 'false',
-  setLeftPanelVisible: (visible) => {
-    set({ leftPanelVisible: visible });
-    localStorage.setItem('leftPanelVisible', String(visible));
-  },
-  setRightPanelVisible: (visible) => {
-    set({ rightPanelVisible: visible });
-    localStorage.setItem('rightPanelVisible', String(visible));
-  },
-
-  // View mode
-  showRaw: false,
-  setShowRaw: (show) => set({ showRaw: show }),
-
-  // Current heading
-  currentHeading: '',
-  setCurrentHeading: (heading) => set({ currentHeading: heading }),
-
-  // Theme
-  darkMode: localStorage.getItem('darkMode') === 'true',
-  setDarkMode: (dark) => {
-    set({ darkMode: dark });
-    localStorage.setItem('darkMode', String(dark));
   },
 }));
 

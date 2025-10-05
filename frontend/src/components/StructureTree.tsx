@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { TreeNode } from '../types';
-import { useStore } from '../store/useStore';
+import { useProjectStore } from '../store/useProjectStore';
+import { useAppStore } from '../store/useAppStore';
 
 interface StructureTreeNodeProps {
   node: TreeNode;
@@ -80,10 +81,10 @@ interface StructureTreeProps {
 }
 
 export function StructureTree({ contentAreaRef }: StructureTreeProps) {
-  const currentFileContent = useStore((state) => state.currentFileContent);
-  const currentHeading = useStore((state) => state.currentHeading);
-  const rightPanelVisible = useStore((state) => state.rightPanelVisible);
-  const setRightPanelVisible = useStore((state) => state.setRightPanelVisible);
+  const currentFileContent = useProjectStore((state) => state.currentFileContent);
+  const currentHeading = useAppStore((state) => state.currentHeading);
+  const rightPanelVisible = useAppStore((state) => state.rightPanelVisible);
+  const setRightPanelVisible = useAppStore((state) => state.setRightPanelVisible);
 
   const scrollToSection = (label: string) => {
     const contentArea = contentAreaRef.current;

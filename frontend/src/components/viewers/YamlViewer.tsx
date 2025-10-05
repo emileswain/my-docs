@@ -1,14 +1,14 @@
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import yaml from 'js-yaml';
-import { useStore } from '../../store/useStore';
+import { useAppStore } from '../../store/useAppStore';
 
 interface YamlViewerProps {
   content: string;
 }
 
 export function YamlViewer({ content }: YamlViewerProps) {
-  const darkMode = useStore((state) => state.darkMode);
+  const darkMode = useAppStore((state) => state.darkMode);
 
   try {
     yaml.load(content);

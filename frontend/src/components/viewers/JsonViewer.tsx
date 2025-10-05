@@ -1,13 +1,13 @@
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useStore } from '../../store/useStore';
+import { useAppStore } from '../../store/useAppStore';
 
 interface JsonViewerProps {
   content: string;
 }
 
 export function JsonViewer({ content }: JsonViewerProps) {
-  const darkMode = useStore((state) => state.darkMode);
+  const darkMode = useAppStore((state) => state.darkMode);
 
   try {
     // Validate JSON

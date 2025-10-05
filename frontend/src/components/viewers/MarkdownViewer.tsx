@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useStore } from '../../store/useStore';
+import { useAppStore } from '../../store/useAppStore';
 
 interface MarkdownViewerProps {
   html: string;
@@ -9,7 +9,7 @@ interface MarkdownViewerProps {
 }
 
 export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile }: MarkdownViewerProps) {
-  const darkMode = useStore((state) => state.darkMode);
+  const darkMode = useAppStore((state) => state.darkMode);
   useEffect(() => {
     if (contentAreaRef.current) {
       setupHeaderTracking();

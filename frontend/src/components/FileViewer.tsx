@@ -1,4 +1,5 @@
-import { useStore } from '../store/useStore';
+import { useProjectStore } from '../store/useProjectStore';
+import { useAppStore } from '../store/useAppStore';
 import { FileViewerHeader } from './FileViewerHeader';
 import { MarkdownViewer } from './viewers/MarkdownViewer';
 import { JsonViewer } from './viewers/JsonViewer';
@@ -11,13 +12,14 @@ interface FileViewerProps {
 }
 
 export function FileViewer({ contentAreaRef }: FileViewerProps) {
-  const currentFile = useStore((state) => state.currentFile);
-  const currentFileName = useStore((state) => state.currentFileName);
-  const currentFileContent = useStore((state) => state.currentFileContent);
-  const showRaw = useStore((state) => state.showRaw);
-  const setShowRaw = useStore((state) => state.setShowRaw);
-  const currentHeading = useStore((state) => state.currentHeading);
-  const setCurrentHeading = useStore((state) => state.setCurrentHeading);
+  const currentFile = useProjectStore((state) => state.currentFile);
+  const currentFileName = useProjectStore((state) => state.currentFileName);
+  const currentFileContent = useProjectStore((state) => state.currentFileContent);
+
+  const showRaw = useAppStore((state) => state.showRaw);
+  const setShowRaw = useAppStore((state) => state.setShowRaw);
+  const currentHeading = useAppStore((state) => state.currentHeading);
+  const setCurrentHeading = useAppStore((state) => state.setCurrentHeading);
 
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
   const isMarkdown = extension === '.md' && !!currentFileContent?.html;
