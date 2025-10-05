@@ -56,33 +56,31 @@ export class FileService {
     projectId: string,
     projectPath: string
   ): Promise<{ cache: Map<string, FileItem[]>; rootItems: FileItem[] }> {
-    const cache = new Map<string, FileItem[]>();
+    const url = `/api/projects/${projectId}/browse-all`;
 
-    const loadFolder = async (folderPath: string): Promise<FileItem[]> => {
-      const relativePath = folderPath.startsWith(projectPath)
-        ? folderPath.substring(projectPath.length).replace(/^\/+/, '')
-        : '';
-
-      try {
-        const data = await this.browseProject(projectId, relativePath || undefined);
-        cache.set(folderPath, data.items);
-
-        // Recursively load subfolders
-        const subfolderPromises = data.items
-          .filter(item => item.type === 'folder')
-          .map(folder => loadFolder(folder.path));
-
-        await Promise.all(subfolderPromises);
-
-        return data.items;
-      } catch (error) {
-        console.error('Error loading folder:', folderPath, error);
-        return [];
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to browse all folders');
       }
-    };
 
-    const rootItems = await loadFolder(projectPath);
-    return { cache, rootItems };
+      const data = await response.json();
+
+      // Convert cache object to Map
+      const cache = new Map<string, FileItem[]>();
+      for (const [path, items] of Object.entries(data.cache)) {
+        cache.set(path, items as FileItem[]);
+      }
+
+      return {
+        cache,
+        rootItems: data.rootItems
+      };
+    } catch (error) {
+      console.error('Error loading all folders:', error);
+      throw error;
+    }
   }
 }
 

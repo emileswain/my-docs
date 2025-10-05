@@ -150,6 +150,75 @@ def remove_project(project_id):
     return jsonify({'error': 'Project not found'}), 404
 
 
+@app.route('/api/projects/<project_identifier>/browse-all')
+def browse_all_folders(project_identifier):
+    """Recursively get entire directory structure for a project."""
+    pm = app.config['project_manager']
+
+    # Try to get project by ID or slug
+    project = pm.get_project(project_identifier)
+    if not project:
+        project = pm.get_project_by_slug(project_identifier)
+
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    root_path = Path(project.path)
+    excluded_folders = {'node_modules', '.git', '__pycache__', '.venv', 'venv', 'dist', 'build'}
+
+    try:
+        cache = {}
+
+        def scan_folder(folder_path: Path):
+            """Recursively scan a folder and its subfolders."""
+            items = []
+
+            try:
+                for item in folder_path.iterdir():
+                    # Skip excluded folders
+                    if item.is_dir() and item.name in excluded_folders:
+                        continue
+
+                    if item.is_file():
+                        # Only include supported file types
+                        if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd']:
+                            stat = item.stat()
+                            items.append({
+                                'name': item.name,
+                                'path': str(item),
+                                'type': 'file',
+                                'extension': item.suffix.lower(),
+                                'modified': stat.st_mtime,
+                                'created': stat.st_birthtime if hasattr(stat, 'st_birthtime') else stat.st_ctime,
+                            })
+                    elif item.is_dir() and not item.name.startswith('.'):
+                        items.append({
+                            'name': item.name,
+                            'path': str(item),
+                            'type': 'folder',
+                        })
+                        # Recursively scan subfolder
+                        scan_folder(item)
+            except (PermissionError, OSError) as e:
+                print(f"Warning: Could not access {folder_path}: {e}")
+
+            # Sort: folders alphabetically, then files by creation date (newest first)
+            folders = sorted([i for i in items if i['type'] == 'folder'], key=lambda x: x['name'].lower())
+            files = sorted([i for i in items if i['type'] == 'file'], key=lambda x: x['created'], reverse=True)
+
+            cache[str(folder_path)] = folders + files
+
+        # Start recursive scan from root
+        scan_folder(root_path)
+
+        return jsonify({
+            'cache': cache,
+            'rootItems': cache.get(str(root_path), [])
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/projects/<project_identifier>/browse')
 @app.route('/api/projects/<project_identifier>/browse/<path:subpath>')
 def browse_project(project_identifier, subpath=''):
