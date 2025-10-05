@@ -4,6 +4,7 @@ import { FileViewerHeader } from './FileViewerHeader';
 import { MarkdownViewer } from './viewers/MarkdownViewer';
 import { JsonViewer } from './viewers/JsonViewer';
 import { YamlViewer } from './viewers/YamlViewer';
+import { MermaidViewer } from './viewers/MermaidViewer';
 import { RawViewer } from './viewers/RawViewer';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 
@@ -21,11 +22,14 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
   const currentHeading = useAppStore((state) => state.currentHeading);
   const setCurrentHeading = useAppStore((state) => state.setCurrentHeading);
 
+  const darkMode = useAppStore((state) => state.darkMode);
+
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
   const isMarkdown = extension === '.md' && !!currentFileContent?.html;
   const isJson = extension === '.json';
   const isYaml = extension === '.yml' || extension === '.yaml';
-  const canToggleRaw = isMarkdown || isJson || isYaml;
+  const isMermaid = extension === '.mmd';
+  const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid;
 
   useScrollPosition(currentFile, contentAreaRef);
 
@@ -57,6 +61,10 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
 
     if (isYaml) {
       return <YamlViewer content={currentFileContent.content} />;
+    }
+
+    if (isMermaid) {
+      return <MermaidViewer content={currentFileContent.content} darkMode={darkMode} />;
     }
 
     return <RawViewer content={currentFileContent.content} />;

@@ -1,0 +1,34 @@
+gantt
+    title Software Development Project Schedule
+    dateFormat YYYY-MM-DD
+
+    section Planning Phase
+    Project Kickoff           :milestone, m1, 2024-01-01, 0d
+    Requirements Gathering    :active, a1, 2024-01-02, 15d
+    System Design            :a2, after a1, 10d
+    Architecture Review      :milestone, m2, after a2, 0d
+
+    section Development
+    Backend API Development  :b1, 2024-02-01, 30d
+    Database Schema Setup    :b2, 2024-02-01, 10d
+    Frontend Development     :b3, after b2, 35d
+    Integration Development  :b4, after b1, 15d
+    Code Complete           :milestone, m3, after b4, 0d
+
+    section Testing
+    Unit Testing            :c1, after b1, 10d
+    Integration Testing     :c2, after b4, 12d
+    Performance Testing     :crit, c3, after c2, 8d
+    Security Testing        :crit, c4, after c2, 10d
+    UAT                     :c5, after c3, 15d
+    Testing Complete        :milestone, m4, after c5, 0d
+
+    section Deployment
+    Staging Deployment      :d1, after c5, 5d
+    Production Deployment   :crit, d2, after d1, 3d
+    Go Live                 :milestone, m5, after d2, 0d
+
+    section Post-Launch
+    Monitoring & Support    :e1, after d2, 30d
+    Bug Fixes              :e2, after d2, 20d
+    Performance Optimization :e3, after e1, 15d

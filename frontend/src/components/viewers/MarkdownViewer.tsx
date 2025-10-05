@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { MermaidViewer } from './MermaidViewer';
 
 interface MarkdownViewerProps {
   html: string;
@@ -8,8 +9,60 @@ interface MarkdownViewerProps {
   currentFile: string | null;
 }
 
+interface ProcessedContent {
+  parts: Array<{ type: 'html' | 'mermaid'; content: string; id?: string }>;
+}
+
 export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile }: MarkdownViewerProps) {
   const darkMode = useAppStore((state) => state.darkMode);
+
+  // Extract mermaid blocks and split HTML
+  const processedContent = useMemo((): ProcessedContent => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const parts: ProcessedContent['parts'] = [];
+    let currentHtml = '';
+
+    const processNode = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+
+        // Check if this is a code block with mermaid
+        if (element.tagName === 'PRE') {
+          const code = element.querySelector('code');
+          if (code && code.className.includes('mermaid')) {
+            // Save any accumulated HTML before this mermaid block
+            if (currentHtml.trim()) {
+              parts.push({ type: 'html', content: currentHtml });
+              currentHtml = '';
+            }
+
+            // Add the mermaid block
+            const mermaidContent = code.textContent || '';
+            const id = `mermaid-${parts.length}`;
+            parts.push({ type: 'mermaid', content: mermaidContent, id });
+            return; // Don't process children
+          }
+        }
+
+        // For other elements, add to current HTML
+        currentHtml += element.outerHTML;
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        currentHtml += node.textContent || '';
+      }
+    };
+
+    // Process all body children
+    Array.from(doc.body.childNodes).forEach(processNode);
+
+    // Add any remaining HTML
+    if (currentHtml.trim()) {
+      parts.push({ type: 'html', content: currentHtml });
+    }
+
+    return { parts };
+  }, [html]);
+
   useEffect(() => {
     if (contentAreaRef.current) {
       setupHeaderTracking();
@@ -28,10 +81,9 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
   }, [html]);
 
   const setupHeaderTracking = () => {
-    const markdownContent = contentAreaRef.current?.querySelector('#markdownContent');
     const contentArea = contentAreaRef.current;
 
-    if (!markdownContent || !contentArea) {
+    if (!contentArea) {
       return;
     }
 
@@ -39,7 +91,7 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
       const contentAreaRect = contentArea.getBoundingClientRect();
       const headingsAbove: Element[] = [];
 
-      const currentHeadings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const currentHeadings = contentArea.querySelectorAll('h1, h2, h3, h4, h5, h6');
 
       currentHeadings.forEach((heading) => {
         const rect = heading.getBoundingClientRect();
@@ -118,7 +170,23 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
     <div
       id="markdownContent"
       className={`prose ${darkMode ? 'prose-invert' : 'prose-slate'} max-w-none`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    >
+      {processedContent.parts.map((part, index) => {
+        if (part.type === 'mermaid') {
+          return (
+            <div key={part.id || index} className="my-8">
+              <MermaidViewer content={part.content} darkMode={darkMode} interactive={false} />
+            </div>
+          );
+        } else {
+          return (
+            <div
+              key={index}
+              dangerouslySetInnerHTML={{ __html: part.content }}
+            />
+          );
+        }
+      })}
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-"""File parser for extracting structure from markdown, JSON, and YAML files."""
+"""File parser for extracting structure from markdown, JSON, YAML, and Mermaid files."""
 
 import json
 import re
@@ -32,6 +32,8 @@ class FileParser:
             return self._parse_json()
         elif self.extension in ['.yml', '.yaml']:
             return self._parse_yaml()
+        elif self.extension == '.mmd':
+            return self._parse_mermaid()
         else:
             return []
 
@@ -115,6 +117,57 @@ class FileParser:
             return [{'label': f'YAML Parse Error: {str(e)}', 'children': []}]
         except Exception as e:
             return [{'label': f'Error: {str(e)}', 'children': []}]
+
+    def _parse_mermaid(self) -> List[Dict[str, Any]]:
+        """Parse Mermaid diagram file and extract diagram type.
+
+        Returns:
+            List of tree nodes for Mermaid diagram structure
+        """
+        content = self.get_raw_content()
+        nodes = []
+
+        # Try to detect diagram type from first non-empty line
+        for line in content.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('%%'):  # Skip comments
+                diagram_type = 'unknown'
+                if line.startswith('graph'):
+                    diagram_type = 'flowchart'
+                elif line.startswith('sequenceDiagram'):
+                    diagram_type = 'sequence'
+                elif line.startswith('classDiagram'):
+                    diagram_type = 'class'
+                elif line.startswith('stateDiagram'):
+                    diagram_type = 'state'
+                elif line.startswith('erDiagram'):
+                    diagram_type = 'ER'
+                elif line.startswith('gantt'):
+                    diagram_type = 'gantt'
+                elif line.startswith('pie'):
+                    diagram_type = 'pie'
+                elif line.startswith('gitGraph'):
+                    diagram_type = 'git'
+                elif line.startswith('journey'):
+                    diagram_type = 'user journey'
+                elif line.startswith('C4'):
+                    diagram_type = 'C4'
+
+                nodes.append({
+                    'label': f'Mermaid Diagram ({diagram_type})',
+                    'type': 'diagram',
+                    'children': []
+                })
+                break
+
+        if not nodes:
+            nodes.append({
+                'label': 'Mermaid Diagram',
+                'type': 'diagram',
+                'children': []
+            })
+
+        return nodes
 
     def _build_json_tree(self, data: Any, key: str = None) -> List[Dict[str, Any]]:
         """Build tree structure from JSON/YAML data.

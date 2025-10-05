@@ -1,0 +1,35 @@
+graph TD
+    Start([Start Application]) --> Init[Initialize System]
+    Init --> CheckAuth{User Authenticated?}
+
+    CheckAuth -->|No| Login[Show Login Page]
+    Login --> ValidateCreds{Credentials Valid?}
+    ValidateCreds -->|No| LoginError[Show Error Message]
+    LoginError --> Login
+    ValidateCreds -->|Yes| CreateSession[Create User Session]
+
+    CheckAuth -->|Yes| LoadDash[Load Dashboard]
+    CreateSession --> LoadDash
+
+    LoadDash --> ShowData[Display User Data]
+    ShowData --> WaitAction{Wait for User Action}
+
+    WaitAction -->|Edit Profile| EditForm[Show Edit Form]
+    EditForm --> SaveChanges{Save Changes?}
+    SaveChanges -->|Yes| UpdateDB[(Update Database)]
+    SaveChanges -->|No| ShowData
+    UpdateDB --> ShowData
+
+    WaitAction -->|View Reports| GenReport[Generate Report]
+    GenReport --> ShowReport[Display Report]
+    ShowReport --> WaitAction
+
+    WaitAction -->|Logout| Cleanup[Clear Session]
+    Cleanup --> End([End Application])
+
+    style Start fill:#90EE90
+    style End fill:#FFB6C1
+    style CheckAuth fill:#FFE4B5
+    style ValidateCreds fill:#FFE4B5
+    style SaveChanges fill:#FFE4B5
+    style WaitAction fill:#FFE4B5

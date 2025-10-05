@@ -1,0 +1,31 @@
+journey
+    title Customer Support Ticket Resolution Journey
+    section Problem Discovery
+      Encounter issue: 1: Customer
+      Search for solution: 2: Customer
+      Decide to contact support: 3: Customer
+    section Ticket Creation
+      Visit support portal: 4: Customer
+      Fill out ticket form: 3: Customer
+      Submit ticket: 4: Customer
+      Receive confirmation: 5: Customer, System
+    section Initial Response
+      Ticket assigned: 5: System, Agent
+      Agent reviews ticket: 4: Agent
+      Agent sends initial response: 5: Agent
+      Customer receives response: 4: Customer
+    section Problem Investigation
+      Customer provides more details: 3: Customer
+      Agent investigates: 3: Agent
+      Agent tests solutions: 2: Agent
+      Agent finds root cause: 4: Agent
+    section Resolution
+      Agent provides solution: 5: Agent
+      Customer implements solution: 3: Customer
+      Customer tests solution: 4: Customer
+      Issue resolved: 5: Customer, Agent
+    section Follow-up
+      Agent requests feedback: 5: Agent
+      Customer rates experience: 4: Customer
+      Ticket closed: 5: System
+      Follow-up email sent: 5: System, Customer

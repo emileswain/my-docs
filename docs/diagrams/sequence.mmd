@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Frontend
+    participant API
+    participant Auth
+    participant Database
+    participant Cache
+
+    User->>Frontend: Click Login
+    Frontend->>User: Show Login Form
+
+    User->>Frontend: Submit Credentials
+    Frontend->>API: POST /api/login
+    activate API
+
+    API->>Auth: Validate Credentials
+    activate Auth
+    Auth->>Database: Query User
+    activate Database
+    Database-->>Auth: User Record
+    deactivate Database
+
+    Auth->>Auth: Hash & Compare Password
+
+    alt Valid Credentials
+        Auth-->>API: Authentication Success
+        deactivate Auth
+        API->>Auth: Generate JWT Token
+        activate Auth
+        Auth-->>API: JWT Token
+        deactivate Auth
+
+        API->>Cache: Store Session
+        activate Cache
+        Cache-->>API: Session Stored
+        deactivate Cache
+
+        API-->>Frontend: 200 OK + Token
+        deactivate API
+        Frontend->>Frontend: Store Token
+        Frontend-->>User: Redirect to Dashboard
+
+    else Invalid Credentials
+        Auth-->>API: Authentication Failed
+        deactivate Auth
+        API-->>Frontend: 401 Unauthorized
+        deactivate API
+        Frontend-->>User: Show Error Message
+    end
+
+    Note over User,Cache: User is now authenticated

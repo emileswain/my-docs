@@ -1,0 +1,24 @@
+C4Context
+    title System Context Diagram for E-Commerce Platform
+
+    Person(customer, "Customer", "A user who shops online")
+    Person(admin, "Administrator", "Manages products and orders")
+
+    System(ecommerce, "E-Commerce Platform", "Allows customers to browse and purchase products online")
+
+    System_Ext(payment, "Payment Gateway", "Stripe/PayPal payment processing")
+    System_Ext(email, "Email Service", "SendGrid email delivery")
+    System_Ext(shipping, "Shipping API", "FedEx/UPS shipping integration")
+    System_Ext(analytics, "Analytics Platform", "Google Analytics")
+    System_Ext(inventory, "Inventory System", "Third-party warehouse management")
+
+    Rel(customer, ecommerce, "Browses products, places orders", "HTTPS")
+    Rel(admin, ecommerce, "Manages catalog, processes orders", "HTTPS")
+
+    Rel(ecommerce, payment, "Processes payments", "REST/HTTPS")
+    Rel(ecommerce, email, "Sends order confirmations", "SMTP/API")
+    Rel(ecommerce, shipping, "Creates shipping labels", "REST/HTTPS")
+    Rel(ecommerce, analytics, "Sends usage data", "JavaScript/HTTPS")
+    Rel(ecommerce, inventory, "Syncs stock levels", "REST/HTTPS")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

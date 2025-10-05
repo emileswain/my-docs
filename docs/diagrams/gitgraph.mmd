@@ -1,0 +1,55 @@
+gitGraph
+    commit id: "Initial commit"
+    commit id: "Add project structure"
+
+    branch develop
+    checkout develop
+    commit id: "Setup development environment"
+    commit id: "Add basic components"
+
+    branch feature/user-auth
+    checkout feature/user-auth
+    commit id: "Add login component"
+    commit id: "Add registration form"
+    commit id: "Implement JWT auth"
+
+    checkout develop
+    merge feature/user-auth
+    commit id: "Update dependencies"
+
+    branch feature/dashboard
+    checkout feature/dashboard
+    commit id: "Create dashboard layout"
+    commit id: "Add data visualization"
+
+    checkout develop
+    branch feature/api-integration
+    checkout feature/api-integration
+    commit id: "Setup API client"
+    commit id: "Add error handling"
+
+    checkout develop
+    merge feature/api-integration
+    commit id: "Code review fixes"
+
+    checkout feature/dashboard
+    commit id: "Connect to API"
+
+    checkout develop
+    merge feature/dashboard
+
+    checkout main
+    merge develop tag: "v1.0.0"
+    commit id: "Production release v1.0"
+
+    branch hotfix/critical-bug
+    checkout hotfix/critical-bug
+    commit id: "Fix authentication issue"
+    commit id: "Add tests for fix"
+
+    checkout main
+    merge hotfix/critical-bug tag: "v1.0.1"
+
+    checkout develop
+    merge hotfix/critical-bug
+    commit id: "Continue development"

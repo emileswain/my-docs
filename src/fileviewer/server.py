@@ -172,7 +172,7 @@ def browse_project(project_identifier, subpath=''):
         for item in folder_path.iterdir():
             if item.is_file():
                 # Only include supported file types
-                if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml']:
+                if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd']:
                     stat = item.stat()
                     items.append({
                         'name': item.name,

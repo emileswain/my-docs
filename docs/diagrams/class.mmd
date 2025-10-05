@@ -1,0 +1,64 @@
+classDiagram
+    class Vehicle {
+        <<abstract>>
+        -string vehicleId
+        -string manufacturer
+        -int year
+        +start()
+        +stop()
+        +getInfo() string
+    }
+
+    class Car {
+        -int numberOfDoors
+        -string fuelType
+        +openTrunk()
+        +closeTrunk()
+    }
+
+    class Motorcycle {
+        -boolean hasSidecar
+        -int engineCC
+        +wheelie()
+    }
+
+    class ElectricCar {
+        -int batteryCapacity
+        -int range
+        +charge()
+        +getBatteryLevel() int
+    }
+
+    class Engine {
+        -string type
+        -int horsepower
+        -int cylinders
+        +ignite()
+        +shutdown()
+    }
+
+    class GPS {
+        -float latitude
+        -float longitude
+        +getCurrentLocation() Location
+        +navigate(destination) Route
+    }
+
+    class Driver {
+        -string name
+        -string licenseNumber
+        -int age
+        +drive(vehicle)
+        +park(vehicle)
+    }
+
+    Vehicle <|-- Car
+    Vehicle <|-- Motorcycle
+    Car <|-- ElectricCar
+
+    Vehicle "1" *-- "1" Engine : has
+    Vehicle "1" o-- "0..1" GPS : equipped with
+    Driver "1" --> "*" Vehicle : drives
+
+    note for Vehicle "Abstract base class\nfor all vehicles"
+    note for ElectricCar "Extends Car with\nelectric-specific features"

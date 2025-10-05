@@ -1,0 +1,49 @@
+stateDiagram-v2
+    [*] --> Idle: Application Start
+
+    Idle --> Loading: User Action
+    Loading --> Loaded: Data Received
+    Loading --> Error: Request Failed
+
+    Loaded --> Processing: Submit Form
+    Processing --> Success: Validation Passed
+    Processing --> ValidationError: Validation Failed
+
+    ValidationError --> Loaded: Fix Errors
+
+    Success --> Saving: Save to Database
+    Saving --> Saved: Success
+    Saving --> Error: Database Error
+
+    Saved --> Idle: Return to Home
+    Error --> Idle: Acknowledge Error
+
+    state Loading {
+        [*] --> FetchingData
+        FetchingData --> ParseResponse
+        ParseResponse --> [*]
+    }
+
+    state Processing {
+        [*] --> ValidateInput
+        ValidateInput --> CheckBusinessRules
+        CheckBusinessRules --> [*]
+    }
+
+    state Saving {
+        [*] --> PrepareData
+        PrepareData --> ExecuteTransaction
+        ExecuteTransaction --> CommitChanges
+        CommitChanges --> [*]
+    }
+
+    note right of Idle
+        Initial state
+        Waiting for user input
+    end note
+
+    note left of Error
+        Display error message
+        Log error details
+        Allow retry
+    end note

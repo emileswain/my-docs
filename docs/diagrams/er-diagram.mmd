@@ -1,0 +1,112 @@
+erDiagram
+    USER ||--o{ ORDER : places
+    USER ||--o{ REVIEW : writes
+    USER }|..|{ ADDRESS : "has multiple"
+
+    ORDER ||--|{ ORDER_ITEM : contains
+    ORDER }o--|| PAYMENT : "paid by"
+    ORDER }o--|| SHIPPING : "shipped via"
+
+    PRODUCT ||--o{ ORDER_ITEM : "ordered in"
+    PRODUCT ||--o{ REVIEW : "reviewed in"
+    PRODUCT }o--|| CATEGORY : "belongs to"
+    PRODUCT }o--|| SUPPLIER : "supplied by"
+
+    CATEGORY ||--o{ CATEGORY : "has subcategories"
+
+    USER {
+        int user_id PK
+        string email UK
+        string password_hash
+        string first_name
+        string last_name
+        datetime created_at
+        datetime updated_at
+        boolean is_active
+    }
+
+    ADDRESS {
+        int address_id PK
+        int user_id FK
+        string street_address
+        string city
+        string state
+        string postal_code
+        string country
+        boolean is_default
+    }
+
+    ORDER {
+        int order_id PK
+        int user_id FK
+        datetime order_date
+        string status
+        decimal total_amount
+        datetime shipped_date
+        datetime delivered_date
+    }
+
+    ORDER_ITEM {
+        int order_item_id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal unit_price
+        decimal discount
+    }
+
+    PRODUCT {
+        int product_id PK
+        int category_id FK
+        int supplier_id FK
+        string name
+        string description
+        decimal price
+        int stock_quantity
+        string sku UK
+        boolean is_active
+    }
+
+    CATEGORY {
+        int category_id PK
+        int parent_category_id FK
+        string name
+        string description
+    }
+
+    SUPPLIER {
+        int supplier_id PK
+        string company_name
+        string contact_name
+        string email
+        string phone
+    }
+
+    PAYMENT {
+        int payment_id PK
+        int order_id FK
+        string payment_method
+        decimal amount
+        string transaction_id
+        datetime payment_date
+        string status
+    }
+
+    SHIPPING {
+        int shipping_id PK
+        int order_id FK
+        string carrier
+        string tracking_number
+        decimal shipping_cost
+        datetime ship_date
+    }
+
+    REVIEW {
+        int review_id PK
+        int product_id FK
+        int user_id FK
+        int rating
+        string title
+        string comment
+        datetime review_date
+    }
