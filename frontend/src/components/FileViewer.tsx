@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import ReactJson from '@microlink/react-json-view';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import yaml from 'js-yaml';
 
 interface FileViewerProps {
   contentAreaRef: React.RefObject<HTMLDivElement | null>;
@@ -18,6 +21,9 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
 
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
   const isMarkdown = extension === '.md' && currentFileContent?.html;
+  const isJson = extension === '.json';
+  const isYaml = extension === '.yml' || extension === '.yaml';
+  const canToggleRaw = isMarkdown || isJson || isYaml;
 
   useEffect(() => {
     if (isMarkdown && !showRaw && contentAreaRef.current) {
@@ -184,6 +190,32 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
       }
     }
 
+    if (extension === '.yml' || extension === '.yaml') {
+      try {
+        yaml.load(currentFileContent.content);
+        return (
+          <SyntaxHighlighter
+            language="yaml"
+            style={tomorrow}
+            customStyle={{
+              fontSize: '14px',
+              borderRadius: '6px',
+              margin: 0,
+            }}
+            showLineNumbers={true}
+          >
+            {currentFileContent.content}
+          </SyntaxHighlighter>
+        );
+      } catch {
+        return (
+          <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
+            <code>{currentFileContent.content}</code>
+          </pre>
+        );
+      }
+    }
+
     return (
       <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
         <code>{currentFileContent.content}</code>
@@ -205,7 +237,7 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
             </p>
           </div>
           <div className="ml-4 flex-shrink-0">
-            {isMarkdown && (
+            {canToggleRaw && (
               <button
                 onClick={toggleView}
                 className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
