@@ -40,44 +40,62 @@ This will:
 
 ## Usage
 
-### Development Mode
+### Quick Start
 
-Run both React dev server and Flask API server concurrently:
-
+**Using Make (recommended):**
 ```bash
 make dev
 ```
 
-This will:
-1. Kill any existing processes on ports 3030 and 6060
-2. Start React dev server on http://localhost:3030
-3. Start Flask API server on http://localhost:6060
-
-Visit http://localhost:3030 to see the React app (API calls are proxied to Flask).
-
-### Run Servers Individually
-
+**Without Make:**
 ```bash
-# Run React dev server only
-make dev-frontend
+# Terminal 1 - Frontend
+cd frontend && npm run dev
 
-# Run Flask API server only
-make dev-backend
+# Terminal 2 - Backend
+uv run fileviewer
+```
+
+Visit http://localhost:3030 (dev) or http://localhost:6060 (production)
+
+### Development Mode
+
+**With Make:**
+```bash
+make dev          # Run both servers
+make dev-frontend # Frontend only
+make dev-backend  # Backend only
+```
+
+**Without Make:**
+```bash
+# Frontend (port 3030)
+cd frontend && npm run dev
+
+# Backend (port 6060)
+uv run fileviewer
 ```
 
 ### Production Mode
 
-Build and run in production mode:
-
+**With Make:**
 ```bash
 make run
 ```
 
-This will:
-1. Build the React app to `frontend/dist/` and copy to `src/fileviewer/static/dist/`
-2. Start Flask server serving the built React app
+**Without Make:**
+```bash
+# Build frontend
+cd frontend && npm run build
 
-Visit http://localhost:6060 to see the production app.
+# Copy to Flask static directory
+cp -r frontend/dist/* src/fileviewer/static/dist/
+
+# Run Flask
+uv run fileviewer
+```
+
+Visit http://localhost:6060
 
 ## Development
 
