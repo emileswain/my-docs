@@ -382,11 +382,26 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
           onClick={handleToggleExpand}
           className="p-1"
           style={{ color: 'var(--text-secondary)' }}
-          title="Expand/Collapse All"
+          title={allExpanded ? "Collapse All" : "Expand All"}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          {allExpanded ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+              <line x1="2" y1="3" x2="2" y2="5" strokeWidth="2" strokeLinecap="round" />
+              <line x1="2" y1="3" x2="6" y2="3" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="7" x2="8" y2="7" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="11" x2="8" y2="11" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+              <line x1="2" y1="3" x2="2" y2="5" strokeWidth="2" strokeLinecap="round" />
+              <line x1="2" y1="3" x2="6" y2="3" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="5" x2="5" y2="7" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="5" x2="8" y2="5" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="9" x2="8" y2="9" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="11" x2="5" y2="13" strokeWidth="2" strokeLinecap="round" />
+              <line x1="5" y1="11" x2="8" y2="11" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
         <button
           onClick={() => setLeftPanelVisible(false)}
