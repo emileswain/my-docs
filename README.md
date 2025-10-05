@@ -1,6 +1,11 @@
-# File Viewer
+# Doc Viewer
 
-A modern web application for browsing and viewing markdown, JSON, and YAML files with a Flask API backend and React frontend.
+A project based document viewer to access markdown, json, yml files related to your projects on your file system.
+
+Simple reaactdom frontend for file navigation and viewing. 
+Python backend to access filesystem and possibly entertain llm integration.
+
+Written by claude. initially like it was done in notepad++. later refactored to at least attempt to follow more modern day programming principles. 
 
 ## Features
 
