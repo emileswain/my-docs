@@ -164,10 +164,6 @@ class FileParser:
 
         else:
             # Primitive value
-            value_str = str(data)
-            if len(value_str) > 50:
-                value_str = value_str[:50] + '...'
-
             type_name = type(data).__name__
             if data is None:
                 type_name = 'null'
@@ -179,7 +175,7 @@ class FileParser:
                 type_name = 'string'
 
             return [{
-                'label': f'{key}: {value_str}' if key else value_str,
+                'label': key if key else str(data),
                 'type': type_name,
                 'children': []
             }]

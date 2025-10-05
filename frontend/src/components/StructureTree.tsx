@@ -9,11 +9,21 @@ interface StructureTreeNodeProps {
   currentHeading: string;
 }
 
+function getTypeIcon(type: string): string {
+  const lowerType = type.toLowerCase();
+  if (lowerType.includes('string')) return 's';
+  if (lowerType.includes('number') || lowerType.includes('int')) return 'i';
+  if (lowerType.includes('array')) return '[]';
+  if (lowerType.includes('object')) return '{}';
+  if (lowerType.includes('boolean')) return 'b';
+  return type.charAt(0);
+}
+
 function StructureTreeNode({ node, depth, onSectionClick, currentHeading }: StructureTreeNodeProps) {
   const hasChildren = node.children && node.children.length > 0;
-  const indent = depth * 12;
   const isActive = currentHeading === node.label;
   const nodeRef = useRef<HTMLDivElement>(null);
+  const indent = (depth - 1) * 16;
 
   useEffect(() => {
     if (isActive && nodeRef.current) {
@@ -25,24 +35,31 @@ function StructureTreeNode({ node, depth, onSectionClick, currentHeading }: Stru
   }, [isActive]);
 
   return (
-    <div className="mb-1">
+    <div>
       <div
         ref={nodeRef}
-        className="structure-tree-item py-1 px-2 rounded flex items-center cursor-pointer"
+        className="structure-tree-item py-1.5 px-2 rounded cursor-pointer flex items-center gap-2"
         style={{
-          paddingLeft: `${indent}px`,
+          paddingLeft: `${8 + indent}px`,
           backgroundColor: isActive ? 'var(--accent-secondary)' : 'transparent',
           fontWeight: isActive ? 600 : 400
         }}
         onClick={() => onSectionClick(node.label)}
       >
-        {hasChildren ? (
-          <i className="fas fa-angle-right text-xs mr-2" style={{ color: 'var(--text-tertiary)' }}></i>
-        ) : (
-          <span className="w-4 inline-block"></span>
+        <span className="text-sm flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+          {node.label}
+        </span>
+        {node.type && (
+          <span
+            className="text-xs flex-shrink-0"
+            style={{
+              color: 'var(--text-tertiary)',
+              opacity: 0.7
+            }}
+          >
+            {getTypeIcon(node.type)}
+          </span>
         )}
-        <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{node.label}</span>
-        {node.type && <span className="ml-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>{node.type}</span>}
       </div>
       {hasChildren &&
         node.children!.map((child, index) => (
