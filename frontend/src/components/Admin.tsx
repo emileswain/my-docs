@@ -108,15 +108,18 @@ export function Admin() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Top Navigation */}
-      <nav className="bg-white shadow-sm h-16 flex items-center justify-between px-6">
+      <nav className="shadow-sm h-16 flex items-center justify-between px-6" style={{ backgroundColor: 'var(--surface-panel)' }}>
         <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-bold text-gray-800">File Viewer Admin</h1>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>File Viewer Admin</h1>
         </div>
         <a
           href="/"
-          className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+          className="px-4 py-2 text-sm rounded-md"
+          style={{ color: 'var(--text-primary)' }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-panel-hover)'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <i className="fas fa-arrow-left mr-2"></i>
           Back to Viewer
@@ -126,13 +129,14 @@ export function Admin() {
       {/* Main Content */}
       <div className="flex">
         {/* Left Sidebar Navigation */}
-        <div className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)]">
+        <div className="w-64 min-h-[calc(100vh-4rem)]" style={{ backgroundColor: 'var(--surface-panel)', borderRight: '1px solid var(--border-primary)' }}>
           <nav className="p-4">
             <ul className="space-y-2">
               <li>
                 <a
                   href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 bg-blue-50 text-blue-600 rounded-md"
+                  className="flex items-center px-4 py-2 rounded-md"
+                  style={{ color: 'var(--accent-primary)', backgroundColor: 'var(--accent-secondary)' }}
                 >
                   <i className="fas fa-folder mr-3"></i>
                   Projects
@@ -143,12 +147,19 @@ export function Admin() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-gray-50 p-8">
+        <div className="flex-1 p-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Projects</h2>
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Projects</h2>
             <button
               onClick={openAddModal}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: 'white',
+                borderColor: 'var(--border-focus)'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary-hover)'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
             >
               <i className="fas fa-plus mr-2"></i>
               Add Project
@@ -159,8 +170,8 @@ export function Admin() {
           <div className="space-y-4">
             {projects.length === 0 ? (
               <div className="text-center py-12">
-                <i className="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
-                <p className="text-gray-500">
+                <i className="fas fa-folder-open text-6xl mb-4" style={{ color: 'var(--text-tertiary)' }}></i>
+                <p style={{ color: 'var(--text-secondary)' }}>
                   No projects yet. Add your first project to get started.
                 </p>
               </div>
@@ -168,27 +179,34 @@ export function Admin() {
               projects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                  className="rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+                  style={{
+                    backgroundColor: 'var(--surface-panel)',
+                    border: '1px solid var(--border-primary)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-800">
+                        <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                           {project.title}
                         </h3>
-                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                        <span className="px-2 py-1 text-xs rounded" style={{
+                          backgroundColor: 'var(--bg-tertiary)',
+                          color: 'var(--text-secondary)'
+                        }}>
                           {project.slug}
                         </span>
                       </div>
                       {project.description && (
-                        <p className="text-gray-600 mb-3">
+                        <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>
                           {project.description}
                         </p>
                       )}
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
                         <div className="flex items-center">
-                          <i className="fas fa-folder text-gray-400 mr-2"></i>
-                          <code className="bg-gray-50 px-2 py-1 rounded">
+                          <i className="fas fa-folder mr-2" style={{ color: 'var(--text-tertiary)' }}></i>
+                          <code className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--code-bg)' }}>
                             {project.path}
                           </code>
                         </div>
@@ -197,21 +215,32 @@ export function Admin() {
                     <div className="flex space-x-2 ml-4">
                       <a
                         href={`/?project=${project.slug}`}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                        className="p-2 rounded-md transition-colors"
+                        style={{ color: 'var(--accent-primary)' }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         title="View Project"
                       >
                         <i className="fas fa-eye"></i>
                       </a>
                       <button
                         onClick={() => openEditModal(project)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                        className="p-2 rounded-md transition-colors"
+                        style={{ color: 'var(--text-secondary)' }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-panel-hover)'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         title="Edit Project"
                       >
                         <i className="fas fa-edit"></i>
                       </button>
                       <button
                         onClick={() => handleDelete(project)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        className="p-2 rounded-md transition-colors"
+                        style={{ color: 'var(--color-red-600)' }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-red-50)';
+                        }}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         title="Delete Project"
                       >
                         <i className="fas fa-trash"></i>
@@ -228,19 +257,22 @@ export function Admin() {
       {/* Add/Edit Project Modal */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) closeModal();
           }}
         >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-800">
+          <div className="rounded-lg shadow-xl w-full max-w-2xl mx-4" style={{ backgroundColor: 'var(--surface-panel)' }}>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+              <h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {editingProject ? 'Edit Project' : 'Add Project'}
               </h3>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600"
+                style={{ color: 'var(--text-tertiary)' }}
+                onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -248,7 +280,7 @@ export function Admin() {
             <div className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                     Title
                   </label>
                   <input
@@ -258,12 +290,18 @@ export function Admin() {
                     onChange={(e) =>
                       setFormData({ ...formData, title: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      border: '1px solid var(--border-primary)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      borderColor: 'var(--border-focus)'
+                    }}
                     placeholder="My Project"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                     Description
                   </label>
                   <textarea
@@ -272,12 +310,18 @@ export function Admin() {
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      border: '1px solid var(--border-primary)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      borderColor: 'var(--border-focus)'
+                    }}
                     placeholder="Project description..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                     Path
                   </label>
                   <input
@@ -287,10 +331,16 @@ export function Admin() {
                     onChange={(e) =>
                       setFormData({ ...formData, path: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      border: '1px solid var(--border-primary)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      borderColor: 'var(--border-focus)'
+                    }}
                     placeholder="/path/to/project"
                   />
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Absolute path to the project directory
                   </p>
                 </div>
@@ -298,13 +348,26 @@ export function Admin() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                    className="px-4 py-2 rounded-md"
+                    style={{
+                      color: 'var(--text-primary)',
+                      backgroundColor: 'var(--bg-tertiary)'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-4 py-2 rounded-md focus:outline-none focus:ring-2"
+                    style={{
+                      backgroundColor: 'var(--accent-primary)',
+                      color: 'white',
+                      borderColor: 'var(--border-focus)'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary-hover)'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
                   >
                     {editingProject ? 'Save Changes' : 'Add Project'}
                   </button>
