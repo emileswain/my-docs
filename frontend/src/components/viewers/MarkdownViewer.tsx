@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { MermaidViewer } from './MermaidViewer';
 
@@ -15,6 +15,20 @@ interface ProcessedContent {
 
 export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile }: MarkdownViewerProps) {
   const darkMode = useAppStore((state) => state.darkMode);
+  const [activeMermaidId, setActiveMermaidId] = useState<string | null>(null);
+
+  // Deactivate on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.mermaid-container')) {
+        setActiveMermaidId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   // Extract mermaid blocks and split HTML
   const processedContent = useMemo((): ProcessedContent => {
@@ -169,13 +183,33 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
   return (
     <div
       id="markdownContent"
-      className={`prose ${darkMode ? 'prose-invert' : 'prose-slate'} max-w-none`}
+      className={`prose ${darkMode ? 'prose-invert' : 'prose-slate'}`}
+      style={{ maxWidth: '100%', width: '100%' }}
     >
       {processedContent.parts.map((part, index) => {
         if (part.type === 'mermaid') {
+          const diagramId = part.id || `mermaid-${index}`;
+          const isActive = activeMermaidId === diagramId;
+
           return (
-            <div key={part.id || index} className="my-8">
-              <MermaidViewer content={part.content} darkMode={darkMode} interactive={false} />
+            <div
+              key={diagramId}
+              className="my-8"
+              style={{
+                width: '100%',
+                maxWidth: '800px',
+                aspectRatio: '4 / 3',
+                margin: '2rem auto',
+                cursor: isActive ? 'default' : 'pointer'
+              }}
+              onClick={(e) => {
+                if (!isActive) {
+                  e.stopPropagation();
+                  setActiveMermaidId(diagramId);
+                }
+              }}
+            >
+              <MermaidViewer content={part.content} darkMode={darkMode} interactive={isActive} />
             </div>
           );
         } else {

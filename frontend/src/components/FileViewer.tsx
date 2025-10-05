@@ -64,7 +64,11 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
     }
 
     if (isMermaid) {
-      return <MermaidViewer content={currentFileContent.content} darkMode={darkMode} />;
+      return (
+        <div style={{ height: '100%', width: '100%' }}>
+          <MermaidViewer content={currentFileContent.content} darkMode={darkMode} />
+        </div>
+      );
     }
 
     return <RawViewer content={currentFileContent.content} />;

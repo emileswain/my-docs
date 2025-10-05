@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import svgPanZoom from 'svg-pan-zoom';
 
 /**
  * MermaidViewer - Renders Mermaid diagrams
@@ -22,6 +23,7 @@ import mermaid from 'mermaid';
  * - Mermaid is initialized with theme based on darkMode
  * - Each diagram gets a unique ID to avoid conflicts
  * - Re-renders when content or theme changes
+ * - Interactive mode adds zoom/pan controls with mouse wheel and drag
  */
 interface MermaidViewerProps {
   content: string;
@@ -31,6 +33,7 @@ interface MermaidViewerProps {
 
 export function MermaidViewer({ content, darkMode = false, interactive = true }: MermaidViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const panZoomRef = useRef<ReturnType<typeof svgPanZoom> | null>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string>('');
 
@@ -63,6 +66,48 @@ export function MermaidViewer({ content, darkMode = false, interactive = true }:
     renderDiagram();
   }, [content, darkMode]);
 
+  // Initialize pan/zoom after SVG is rendered
+  useEffect(() => {
+    if (!svg || !interactive || !containerRef.current) return;
+
+    // Wait for SVG to be in DOM
+    const svgElement = containerRef.current.querySelector('svg');
+    if (!svgElement) return;
+
+    // Cleanup previous instance
+    if (panZoomRef.current) {
+      panZoomRef.current.destroy();
+      panZoomRef.current = null;
+    }
+
+    // Remove max-width constraint from SVG
+    svgElement.style.maxWidth = 'none';
+    svgElement.style.width = '100%';
+    svgElement.style.height = '100%';
+
+    // Initialize svg-pan-zoom
+    try {
+      panZoomRef.current = svgPanZoom(svgElement, {
+        zoomEnabled: true,
+        controlIconsEnabled: true,
+        fit: true,
+        center: true,
+        minZoom: 0.1,
+        maxZoom: 10,
+        zoomScaleSensitivity: 0.06,
+      });
+    } catch (err) {
+      console.error('Failed to initialize pan/zoom:', err);
+    }
+
+    return () => {
+      if (panZoomRef.current) {
+        panZoomRef.current.destroy();
+        panZoomRef.current = null;
+      }
+    };
+  }, [svg, interactive]);
+
   if (error) {
     return (
       <div
@@ -90,10 +135,14 @@ export function MermaidViewer({ content, darkMode = false, interactive = true }:
         justifyContent: 'center',
         alignItems: 'center',
         padding: '2rem',
-        minHeight: '200px',
+        minHeight: '100%',
+        height: '100%',
+        width: '100%',
         backgroundColor: 'var(--bg-secondary)',
         borderRadius: '0.5rem',
-        overflow: interactive ? 'auto' : 'hidden'
+        overflow: 'hidden',
+        position: 'relative',
+        border: interactive ? '2px solid var(--border-primary)' : 'none'
       }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
