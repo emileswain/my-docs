@@ -7,6 +7,11 @@ Python backend to access filesystem and possibly entertain llm integration.
 
 Written by claude. initially like it was done in notepad++. later refactored to at least attempt to follow more modern day programming principles. 
 
+## Why
+I was using mkdocs to review markdown files, but needed some extra functionality, like being able to review multiple project docs without having to launch multiple servers etc. So i got claude to write this for me. 
+
+It started off like it was writing code in notepad++. I mean it worked, but also it was putting nearly everything in one massive file. So i tamed it a bit.
+
 ## Features
 
 - Web-based file browser with real-time file system monitoring via SSE
