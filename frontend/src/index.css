@@ -1,6 +1,150 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* ========================================
+   Design Tokens - Semantic Color System
+   ======================================== */
+
+:root {
+  /* Primitives - Slate/Gray Scale */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+
+  /* Primitives - Blue Scale */
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+
+  /* Primitives - Gray Scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* Primitives - Green Scale */
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+
+  /* Primitives - Red Scale */
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+
+  /* Semantic Tokens - Light Mode (Default) */
+  --bg-primary: var(--color-gray-50);
+  --bg-secondary: white;
+  --bg-tertiary: var(--color-gray-100);
+  --bg-elevated: white;
+
+  --text-primary: var(--color-gray-900);
+  --text-secondary: var(--color-gray-600);
+  --text-tertiary: var(--color-gray-500);
+  --text-inverse: white;
+
+  --border-primary: var(--color-gray-200);
+  --border-secondary: var(--color-gray-300);
+  --border-focus: var(--color-blue-400);
+
+  --surface-nav: var(--color-slate-800);
+  --surface-nav-hover: var(--color-slate-700);
+  --surface-panel: white;
+  --surface-panel-hover: var(--color-gray-50);
+
+  --accent-primary: var(--color-blue-500);
+  --accent-primary-hover: var(--color-blue-600);
+  --accent-secondary: var(--color-gray-200);
+  --accent-secondary-hover: var(--color-gray-300);
+
+  --icon-primary: var(--color-slate-300);
+  --icon-hover: white;
+
+  --scrollbar-track: var(--color-gray-100);
+  --scrollbar-thumb: var(--color-gray-400);
+  --scrollbar-thumb-hover: var(--color-gray-600);
+
+  --code-bg: var(--color-gray-50);
+  --copy-button-bg: var(--color-gray-600);
+  --copy-button-success: var(--color-green-600);
+}
+
+/* Dark Mode Tokens */
+[data-theme="dark"] {
+  --bg-primary: var(--color-slate-900);
+  --bg-secondary: var(--color-slate-800);
+  --bg-tertiary: var(--color-slate-700);
+  --bg-elevated: var(--color-slate-800);
+
+  --text-primary: var(--color-gray-100);
+  --text-secondary: var(--color-gray-400);
+  --text-tertiary: var(--color-gray-500);
+  --text-inverse: var(--color-gray-900);
+
+  --border-primary: var(--color-slate-700);
+  --border-secondary: var(--color-slate-600);
+  --border-focus: var(--color-blue-500);
+
+  --surface-nav: var(--color-slate-950);
+  --surface-nav-hover: var(--color-slate-800);
+  --surface-panel: var(--color-slate-800);
+  --surface-panel-hover: var(--color-slate-700);
+
+  --accent-primary: var(--color-blue-500);
+  --accent-primary-hover: var(--color-blue-400);
+  --accent-secondary: var(--color-slate-700);
+  --accent-secondary-hover: var(--color-slate-600);
+
+  --icon-primary: var(--color-slate-400);
+  --icon-hover: var(--color-slate-200);
+
+  --scrollbar-track: var(--color-slate-800);
+  --scrollbar-thumb: var(--color-slate-600);
+  --scrollbar-thumb-hover: var(--color-slate-500);
+
+  --code-bg: var(--color-slate-800);
+  --copy-button-bg: var(--color-slate-600);
+  --copy-button-success: var(--color-green-500);
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -9,6 +153,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 #root {
@@ -20,26 +166,32 @@ code {
     monospace;
 }
 
-/* Custom scrollbar */
+/* ========================================
+   Custom Scrollbar
+   ======================================== */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* Copy button for code blocks */
+/* ========================================
+   Code Block Styles
+   ======================================== */
+
 pre {
   position: relative;
 }
@@ -54,8 +206,8 @@ pre {
   opacity: 0;
   transition: opacity 0.2s;
   user-select: none;
-  background: #4a5568;
-  color: white;
+  background: var(--copy-button-bg);
+  color: var(--text-inverse);
   border-radius: 4px;
 }
 
@@ -63,7 +215,10 @@ pre:hover .copy-icon {
   opacity: 1;
 }
 
-/* Tree item styles */
+/* ========================================
+   Tree Component Styles
+   ======================================== */
+
 .tree-item {
   cursor: pointer;
   user-select: none;
@@ -71,20 +226,19 @@ pre:hover .copy-icon {
 }
 
 .tree-item:hover {
-  background-color: #f7fafc;
+  background-color: var(--surface-panel-hover);
 }
 
 .tree-children {
   margin-left: 1rem;
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid var(--border-primary);
   padding-left: 0.5rem;
 }
 
-/* Structure tree item */
 .structure-tree-item {
   transition: all 0.15s;
 }
 
 .structure-tree-item:hover {
-  background-color: #f7fafc;
+  background-color: var(--surface-panel-hover);
 }

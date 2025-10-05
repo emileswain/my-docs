@@ -18,6 +18,8 @@ export function Layout() {
   const setCurrentProject = useStore((state) => state.setCurrentProject);
   const setCurrentFile = useStore((state) => state.setCurrentFile);
   const setOpenFolders = useStore((state) => state.setOpenFolders);
+  const darkMode = useStore((state) => state.darkMode);
+  const setDarkMode = useStore((state) => state.setDarkMode);
 
   // Load projects on mount
   useEffect(() => {
@@ -107,7 +109,7 @@ export function Layout() {
   return (
     <div className="h-screen flex flex-col">
       {/* Top Navigation */}
-      <nav className="bg-slate-800 h-14 flex items-center justify-between px-6">
+      <nav className="h-14 flex items-center justify-between px-6" style={{ backgroundColor: 'var(--surface-nav)' }}>
         <div className="flex items-center space-x-6 flex-1">
           {/* Book Logo SVG */}
           <svg width="80" height="32" viewBox="0 0 80 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -131,7 +133,13 @@ export function Layout() {
           <div className="relative">
             <button
               onClick={toggleDropdown}
-              className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm font-medium text-slate-200 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="px-3 py-1.5 rounded text-sm font-medium focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: 'var(--surface-nav-hover)',
+                borderColor: 'var(--border-secondary)',
+                color: 'var(--icon-primary)',
+                border: '1px solid'
+              }}
             >
               <i className="fas fa-folder mr-2 text-xs"></i>
               <span>{currentProject?.title || 'Select Project'}</span>
@@ -139,22 +147,32 @@ export function Layout() {
             </button>
             {isDropdownOpen && (
               <div
-                className="absolute z-10 mt-1 w-64 bg-white shadow-lg rounded border border-gray-200 max-h-60 overflow-y-auto"
+                className="absolute z-10 mt-1 w-64 shadow-lg rounded max-h-60 overflow-y-auto"
+                style={{
+                  backgroundColor: 'var(--bg-elevated)',
+                  borderColor: 'var(--border-primary)',
+                  border: '1px solid'
+                }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="py-1">
                   {projects.length === 0 ? (
-                    <p className="px-4 py-2 text-gray-400 italic text-sm">No projects available</p>
+                    <p className="px-4 py-2 italic text-sm" style={{ color: 'var(--text-tertiary)' }}>No projects available</p>
                   ) : (
                     projects.map((project) => (
                       <div
                         key={project.id}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        className="px-4 py-2 cursor-pointer"
+                        style={{
+                          transition: 'background-color 0.15s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-panel-hover)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         onClick={() => selectProject(project)}
                       >
-                        <div className="text-sm font-semibold text-gray-800">{project.title}</div>
+                        <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{project.title}</div>
                         {project.description && (
-                          <div className="text-xs text-gray-500">{project.description}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{project.description}</div>
                         )}
                       </div>
                     ))
@@ -165,13 +183,36 @@ export function Layout() {
           </div>
         </div>
 
-        {/* Settings Icon */}
-        <div>
+        {/* Theme Toggle and Settings */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 rounded focus:outline-none focus:ring-2"
+            style={{
+              transition: 'background-color 0.15s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-nav-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <i
+              className={`fas fa-${darkMode ? 'sun' : 'moon'} text-xl`}
+              style={{ color: 'var(--icon-primary)' }}
+            ></i>
+          </button>
           <a
             href="/admin"
-            className="p-2 rounded hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 inline-block"
+            className="p-2 rounded focus:outline-none focus:ring-2 inline-block"
+            style={{
+              transition: 'background-color 0.15s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-nav-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <i className="fas fa-cog text-xl text-slate-300 hover:text-white"></i>
+            <i
+              className="fas fa-cog text-xl"
+              style={{ color: 'var(--icon-primary)' }}
+            ></i>
           </a>
         </div>
       </nav>

@@ -61,7 +61,10 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
   };
 
   return (
-    <div className="flex-1 bg-white flex flex-col min-w-0">
+    <div
+      className="flex-1 flex flex-col min-w-0"
+      style={{ backgroundColor: 'var(--bg-secondary)' }}
+    >
       <FileViewerHeader
         fileName={currentFileName || ''}
         currentHeading={currentHeading}
@@ -75,7 +78,10 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
         className="flex-1 overflow-y-auto p-6"
       >
         {!currentFile ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
+          <div
+            className="flex items-center justify-center h-full"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
             <div className="text-center">
               <i className="fas fa-file-alt text-6xl mb-4"></i>
               <p>Select a file to view its structure</p>

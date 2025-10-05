@@ -79,16 +79,16 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
     return (
       <div>
         <div
-          className="tree-item py-1 px-2 rounded cursor-pointer hover:bg-gray-100"
+          className="tree-item py-1 px-2 rounded cursor-pointer"
           onClick={handleToggle}
         >
-          <i className={`fas ${folderIcon} text-blue-500 mr-2`}></i>
-          <span>{item.name}</span>
+          <i className={`fas ${folderIcon} mr-2`} style={{ color: 'var(--accent-primary)' }}></i>
+          <span style={{ color: 'var(--text-primary)' }}>{item.name}</span>
         </div>
         {isOpen && (
           <div className="ml-4">
             {isLoading ? (
-              <div className="text-gray-400 text-sm py-1 px-2">Loading...</div>
+              <div className="text-sm py-1 px-2" style={{ color: 'var(--text-tertiary)' }}>Loading...</div>
             ) : (
               filteredChildren.map((child) => (
                 <FileTreeItem
@@ -113,13 +113,18 @@ function FileTreeItem({ item, onFileSelect, projectId, openFolders, filter }: Fi
   const icon = getFileIcon(item.extension || '');
   return (
     <div
-      className={`tree-item py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${
-        isSelected ? 'bg-blue-100 font-semibold' : ''
-      }`}
+      className="tree-item py-1 px-2 rounded cursor-pointer"
+      style={{
+        backgroundColor: isSelected ? 'var(--accent-secondary)' : 'transparent',
+        fontWeight: isSelected ? 600 : 400
+      }}
       onClick={handleFileClick}
     >
-      <i className={`fas ${icon} ${isSelected ? 'text-blue-600' : 'text-gray-500'} mr-2`}></i>
-      <span>{item.name}</span>
+      <i
+        className={`fas ${icon} mr-2`}
+        style={{ color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+      ></i>
+      <span style={{ color: 'var(--text-primary)' }}>{item.name}</span>
     </div>
   );
 }
@@ -312,10 +317,17 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
 
   if (!leftPanelVisible) {
     return (
-      <div className="bg-white border-r border-gray-200 flex items-start p-2">
+      <div
+        className="flex items-start p-2"
+        style={{
+          backgroundColor: 'var(--surface-panel)',
+          borderRight: '1px solid var(--border-primary)'
+        }}
+      >
         <button
           onClick={() => setLeftPanelVisible(true)}
-          className="p-1 text-gray-600 hover:text-gray-800"
+          className="p-1"
+          style={{ color: 'var(--text-secondary)' }}
           title="Show Files"
         >
           <i className="fas fa-chevron-right"></i>
@@ -325,19 +337,40 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   }
 
   return (
-    <div className="bg-white border-r border-gray-200 panel flex flex-col" style={{ minWidth: '200px', width: '300px' }}>
-      <div className="flex items-center px-4 border-b border-gray-200 bg-gray-50 gap-2 flex-shrink-0" style={{ height: '60px' }}>
+    <div
+      className="panel flex flex-col"
+      style={{
+        minWidth: '200px',
+        width: '300px',
+        backgroundColor: 'var(--surface-panel)',
+        borderRight: '1px solid var(--border-primary)'
+      }}
+    >
+      <div
+        className="flex items-center px-4 gap-2 flex-shrink-0"
+        style={{
+          height: '60px',
+          borderBottom: '1px solid var(--border-primary)',
+          backgroundColor: 'var(--bg-tertiary)'
+        }}
+      >
         <input
           type="text"
           value={filter}
           onChange={handleFilterChange}
           placeholder="Filter files..."
-          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+          className="flex-1 px-2 py-1 text-xs rounded focus:outline-none focus:ring-1"
+          style={{
+            border: '1px solid var(--border-secondary)',
+            backgroundColor: 'var(--bg-secondary)',
+            color: 'var(--text-primary)'
+          }}
         />
         {filter && (
           <button
             onClick={clearFilter}
-            className="p-1 text-gray-400 hover:text-gray-600"
+            className="p-1"
+            style={{ color: 'var(--text-tertiary)' }}
             title="Clear Filter"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,7 +380,8 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
         )}
         <button
           onClick={handleToggleExpand}
-          className="p-1 text-gray-500 hover:text-gray-700"
+          className="p-1"
+          style={{ color: 'var(--text-secondary)' }}
           title="Expand/Collapse All"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,7 +390,8 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
         </button>
         <button
           onClick={() => setLeftPanelVisible(false)}
-          className="p-1 text-gray-500 hover:text-gray-700"
+          className="p-1"
+          style={{ color: 'var(--text-secondary)' }}
           title="Hide Panel"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -366,9 +401,9 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
       </div>
       <div className="text-sm p-4 flex-1 overflow-y-auto">
         {!currentProject ? (
-          <p className="text-gray-400 italic text-sm">Select a project to browse</p>
+          <p className="italic text-sm" style={{ color: 'var(--text-tertiary)' }}>Select a project to browse</p>
         ) : filteredItems.length === 0 ? (
-          <p className="text-gray-400 italic text-sm">No files found</p>
+          <p className="italic text-sm" style={{ color: 'var(--text-tertiary)' }}>No files found</p>
         ) : (
           filteredItems.map((item) => (
             <FileTreeItem

@@ -32,6 +32,10 @@ interface AppState {
   // Current heading (for markdown files)
   currentHeading: string;
   setCurrentHeading: (heading: string) => void;
+
+  // Theme
+  darkMode: boolean;
+  setDarkMode: (dark: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -109,6 +113,13 @@ export const useStore = create<AppState>((set, get) => ({
   // Current heading
   currentHeading: '',
   setCurrentHeading: (heading) => set({ currentHeading: heading }),
+
+  // Theme
+  darkMode: localStorage.getItem('darkMode') === 'true',
+  setDarkMode: (dark) => {
+    set({ darkMode: dark });
+    localStorage.setItem('darkMode', String(dark));
+  },
 }));
 
 // Helper to load open folders from localStorage

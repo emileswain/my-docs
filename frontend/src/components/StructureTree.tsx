@@ -28,19 +28,21 @@ function StructureTreeNode({ node, depth, onSectionClick, currentHeading }: Stru
     <div className="mb-1">
       <div
         ref={nodeRef}
-        className={`structure-tree-item py-1 px-2 rounded flex items-center cursor-pointer hover:bg-gray-100 ${
-          isActive ? 'bg-blue-100 font-semibold' : ''
-        }`}
-        style={{ paddingLeft: `${indent}px` }}
+        className="structure-tree-item py-1 px-2 rounded flex items-center cursor-pointer"
+        style={{
+          paddingLeft: `${indent}px`,
+          backgroundColor: isActive ? 'var(--accent-secondary)' : 'transparent',
+          fontWeight: isActive ? 600 : 400
+        }}
         onClick={() => onSectionClick(node.label)}
       >
         {hasChildren ? (
-          <i className="fas fa-angle-right text-xs mr-2 text-gray-400"></i>
+          <i className="fas fa-angle-right text-xs mr-2" style={{ color: 'var(--text-tertiary)' }}></i>
         ) : (
           <span className="w-4 inline-block"></span>
         )}
-        <span className="text-sm">{node.label}</span>
-        {node.type && <span className="ml-2 text-xs text-gray-400">{node.type}</span>}
+        <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{node.label}</span>
+        {node.type && <span className="ml-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>{node.type}</span>}
       </div>
       {hasChildren &&
         node.children!.map((child, index) => (
@@ -92,10 +94,17 @@ export function StructureTree({ contentAreaRef }: StructureTreeProps) {
 
   if (!rightPanelVisible) {
     return (
-      <div className="bg-white border-l border-gray-200 flex items-start p-2">
+      <div
+        className="flex items-start p-2"
+        style={{
+          backgroundColor: 'var(--surface-panel)',
+          borderLeft: '1px solid var(--border-primary)'
+        }}
+      >
         <button
           onClick={() => setRightPanelVisible(true)}
-          className="p-1 text-gray-600 hover:text-gray-800"
+          className="p-1"
+          style={{ color: 'var(--text-secondary)' }}
           title="Show Structure"
         >
           <i className="fas fa-chevron-left"></i>
@@ -107,14 +116,33 @@ export function StructureTree({ contentAreaRef }: StructureTreeProps) {
   const tree = currentFileContent?.tree;
 
   return (
-    <div className="bg-white border-l border-gray-200 panel flex flex-col" style={{ minWidth: '200px', width: '300px' }}>
-      <div className="flex items-center justify-between px-6 border-b border-gray-200 bg-gray-50 flex-shrink-0" style={{ height: '60px' }}>
-        <h2 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+    <div
+      className="panel flex flex-col"
+      style={{
+        minWidth: '200px',
+        width: '300px',
+        backgroundColor: 'var(--surface-panel)',
+        borderLeft: '1px solid var(--border-primary)'
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-6 flex-shrink-0"
+        style={{
+          height: '60px',
+          borderBottom: '1px solid var(--border-primary)',
+          backgroundColor: 'var(--bg-tertiary)'
+        }}
+      >
+        <h2
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: 'var(--text-secondary)' }}
+        >
           Structure
         </h2>
         <button
           onClick={() => setRightPanelVisible(false)}
-          className="p-1 text-gray-500 hover:text-gray-700"
+          className="p-1"
+          style={{ color: 'var(--text-secondary)' }}
           title="Hide Panel"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +152,7 @@ export function StructureTree({ contentAreaRef }: StructureTreeProps) {
       </div>
       <div className="text-sm p-4 flex-1 overflow-y-auto">
         {!tree || tree.length === 0 ? (
-          <p className="text-gray-400 italic text-sm">No structure found</p>
+          <p className="italic text-sm" style={{ color: 'var(--text-tertiary)' }}>No structure found</p>
         ) : (
           tree.map((node, index) => (
             <StructureTreeNode
