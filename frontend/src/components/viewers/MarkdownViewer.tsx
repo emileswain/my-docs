@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useStore } from '../../store/useStore';
 
 interface MarkdownViewerProps {
   html: string;
@@ -8,6 +9,7 @@ interface MarkdownViewerProps {
 }
 
 export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile }: MarkdownViewerProps) {
+  const darkMode = useStore((state) => state.darkMode);
   useEffect(() => {
     if (contentAreaRef.current) {
       setupHeaderTracking();
@@ -115,7 +117,7 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
   return (
     <div
       id="markdownContent"
-      className="prose prose-slate max-w-none"
+      className={`prose ${darkMode ? 'prose-invert' : 'prose-slate'} max-w-none`}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
