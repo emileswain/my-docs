@@ -43,7 +43,7 @@ def index():
 
     if is_dev:
         # In development, redirect to Vite dev server
-        return redirect('http://localhost:3000')
+        return redirect('http://localhost:3030')
 
     # In production, serve the built frontend
     dist_dir = Path(__file__).parent.parent.parent / 'frontend' / 'dist'

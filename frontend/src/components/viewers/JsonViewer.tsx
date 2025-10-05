@@ -1,4 +1,5 @@
-import ReactJson from '@microlink/react-json-view';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { prism, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useStore } from '../../store/useStore';
 
 interface JsonViewerProps {
@@ -9,19 +10,22 @@ export function JsonViewer({ content }: JsonViewerProps) {
   const darkMode = useStore((state) => state.darkMode);
 
   try {
-    const jsonData = JSON.parse(content);
+    // Validate JSON
+    JSON.parse(content);
+
     return (
-      <ReactJson
-        src={jsonData}
-        theme={darkMode ? 'tomorrow' : 'rjv-default'}
-        collapsed={2}
-        displayDataTypes={false}
-        enableClipboard={true}
-        style={{
+      <SyntaxHighlighter
+        language="json"
+        style={darkMode ? tomorrow : prism}
+        customStyle={{
           fontSize: '14px',
-          backgroundColor: darkMode ? 'var(--code-bg)' : 'transparent'
+          borderRadius: '6px',
+          margin: 0,
         }}
-      />
+        showLineNumbers={true}
+      >
+        {content}
+      </SyntaxHighlighter>
     );
   } catch {
     return (
