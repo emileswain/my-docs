@@ -3,6 +3,30 @@ import { useProjectStore } from '../store/useProjectStore';
 import { projectService } from '../services/projectService';
 import type { CreateProjectDto, UpdateProjectDto } from '../services/projectService';
 
+/**
+ * useProjects - Custom hook for managing project operations
+ *
+ * Purpose:
+ * - Provides business logic for project CRUD operations
+ * - Connects ProjectService (API) with ProjectStore (state)
+ * - Handles loading, creating, updating, and deleting projects
+ *
+ * Used by:
+ * - Admin component (full CRUD operations)
+ * - Layout component (loading projects on mount)
+ *
+ * Returns:
+ * - projects: Current list of projects from store
+ * - loadProjects: Fetches all projects from API and updates store
+ * - createProject: Creates new project and adds to store
+ * - updateProject: Updates existing project in API and store
+ * - deleteProject: Deletes project from API and removes from store
+ *
+ * Special considerations:
+ * - All async operations throw errors on failure
+ * - Store is automatically updated on successful operations
+ * - Errors are logged to console but must be caught by caller for UI feedback
+ */
 export function useProjects() {
   const projects = useProjectStore((state) => state.projects);
   const setProjects = useProjectStore((state) => state.setProjects);

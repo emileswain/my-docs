@@ -3,6 +3,34 @@ import { useProjectStore } from '../store/useProjectStore';
 import { useFileTreeStore } from '../store/useFileTreeStore';
 import { fileService } from '../services/fileService';
 
+/**
+ * useFileTree - Custom hook for managing file tree state and operations
+ *
+ * Purpose:
+ * - Loads and caches entire file tree for a project
+ * - Manages folder expand/collapse state
+ * - Provides file tree data and operations to components
+ *
+ * Used by:
+ * - FileTree component (primary consumer)
+ *
+ * Parameters:
+ * - projectId: ID of the current project (null if no project selected)
+ *
+ * Returns:
+ * - isLoading: Boolean indicating if file tree is being loaded
+ * - treeData: Cached file tree data (includes cache Map and rootItems array)
+ * - openFolders: Array of currently expanded folder paths
+ * - loadFileTree: Function to load/reload the entire file tree
+ * - toggleFolder: Function to expand/collapse a single folder
+ * - setOpenFolders: Function to set multiple folders as open/closed
+ *
+ * Special considerations:
+ * - Recursively loads ALL folders on initial load - may take time for large projects
+ * - Cache is stored per-project in FileTreeStore
+ * - Open folder state is persisted to localStorage
+ * - All operations are no-ops if projectId is null
+ */
 export function useFileTree(projectId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
 

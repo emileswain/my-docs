@@ -4,6 +4,24 @@ export interface BrowseResponse {
   items: FileItem[];
 }
 
+/**
+ * FileService - Handles all file browsing and content retrieval operations
+ *
+ * Purpose:
+ * - Browses project directories and retrieves file listings
+ * - Fetches file content with parsed tree structure
+ * - Recursively loads entire folder hierarchies for caching
+ *
+ * Used by:
+ * - useFileTree hook (for loading file tree cache)
+ * - useFileContent hook (for loading individual files)
+ *
+ * Special considerations:
+ * - browseAllFolders() recursively loads ALL folders - may take time for large projects
+ * - Returns Map data structure for O(1) folder lookups in cache
+ * - fetchFileContent() returns parsed content including tree structure and HTML (for markdown)
+ * - All methods throw errors on failure - consumers should handle with try/catch
+ */
 export class FileService {
   async browseProject(
     projectId: string,

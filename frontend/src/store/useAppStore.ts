@@ -1,5 +1,33 @@
 import { create } from 'zustand';
 
+/**
+ * useAppStore - Global state store for UI-related state
+ *
+ * Purpose:
+ * - Manages all UI state (panel visibility, theme, view mode)
+ * - Persists UI preferences to localStorage
+ * - Separated from data state for better organization
+ *
+ * Used by:
+ * - Layout component (panel visibility)
+ * - FileTree component (left panel visibility)
+ * - StructureTree component (right panel visibility)
+ * - FileViewer component (raw/rendered view mode, current heading)
+ * - All viewer components (dark mode theme)
+ * - App component (dark mode for theme application)
+ *
+ * State:
+ * - leftPanelVisible: File tree panel visibility
+ * - rightPanelVisible: Structure tree panel visibility
+ * - showRaw: Toggle between raw and rendered view
+ * - darkMode: Dark/light theme preference
+ * - currentHeading: Current markdown heading for navigation
+ *
+ * Special considerations:
+ * - All state is persisted to localStorage on change
+ * - Dark mode is initialized from localStorage on app start
+ * - Panel visibility defaults to true if not in localStorage
+ */
 interface AppState {
   // Panel visibility
   leftPanelVisible: boolean;

@@ -6,6 +6,25 @@ export type FileSystemEvent = {
 
 export type FileSystemEventHandler = (event: FileSystemEvent) => void;
 
+/**
+ * EventService - Manages Server-Sent Events (SSE) connection for real-time file system updates
+ *
+ * Purpose:
+ * - Maintains a single SSE connection to /api/events endpoint
+ * - Broadcasts file system change events to all subscribers
+ * - Automatically reconnects on connection errors
+ *
+ * Used by:
+ * - useFileSystemEvents hook (primary consumer)
+ * - FileTree component (via useFileSystemEvents hook)
+ *
+ * Special considerations:
+ * - Singleton pattern - maintains one SSE connection shared across all components
+ * - Auto-reconnects after 5 seconds on error
+ * - Multiple components can subscribe simultaneously - each gets their own unsubscribe function
+ * - Connection is NOT closed when individual components unmount (to avoid disrupting other subscribers)
+ * - Events are filtered by project_id at the hook level, not here
+ */
 export class EventService {
   private eventSource: EventSource | null = null;
   private handlers: Set<FileSystemEventHandler> = new Set();

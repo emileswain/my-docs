@@ -12,6 +12,24 @@ export interface UpdateProjectDto {
   description?: string;
 }
 
+/**
+ * ProjectService - Handles all project-related API operations
+ *
+ * Purpose:
+ * - Provides CRUD operations for projects (fetch, create, update, delete)
+ * - Encapsulates all project API calls in one place
+ * - Handles error responses and data transformation
+ *
+ * Used by:
+ * - useProjects hook (primary consumer)
+ * - Admin component (via useProjects hook)
+ * - Layout component (via useProjects hook)
+ *
+ * Special considerations:
+ * - All methods throw errors on failure - consumers should handle with try/catch
+ * - createProject and updateProject return the full project object from server
+ * - API responses are wrapped in {success, project} format
+ */
 export class ProjectService {
   async fetchProjects(): Promise<Project[]> {
     const response = await fetch('/api/projects');

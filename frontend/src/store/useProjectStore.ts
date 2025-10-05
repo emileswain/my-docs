@@ -1,6 +1,39 @@
 import { create } from 'zustand';
 import type { Project, FileContent } from '../types';
 
+/**
+ * useProjectStore - Global state store for project and file data
+ *
+ * Purpose:
+ * - Manages all project-related data (projects list, current project)
+ * - Manages current file state and content
+ * - Manages folder expand/collapse state per project
+ * - Persists selections to localStorage
+ *
+ * Used by:
+ * - useProjects hook (project CRUD operations)
+ * - useFileTree hook (folder open/close state)
+ * - useFileContent hook (current file data)
+ * - Layout component (project selection, file selection)
+ * - FileTree component (current project, open folders)
+ * - FileViewer component (current file content)
+ * - StructureTree component (current file content)
+ * - FileTreeItem component (current file for selection highlighting)
+ *
+ * State:
+ * - projects: Array of all available projects
+ * - currentProject: Currently selected project
+ * - currentFile: Path of currently open file
+ * - currentFileName: Name of currently open file
+ * - currentFileContent: Full content object for current file
+ * - openFolders: Per-project mapping of expanded folder paths
+ *
+ * Special considerations:
+ * - Project and file selections are persisted to localStorage
+ * - Open folders are persisted per-project
+ * - Removing a project clears it from currentProject if selected
+ * - Updating a project updates currentProject if it's the selected one
+ */
 interface ProjectState {
   // Projects
   projects: Project[];
