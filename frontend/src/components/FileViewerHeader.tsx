@@ -7,6 +7,7 @@ interface FileViewerHeaderProps {
   isDirty?: boolean;
   isSaving?: boolean;
   onSave?: () => void;
+  canEdit?: boolean;
 }
 
 export function FileViewerHeader({
@@ -17,7 +18,8 @@ export function FileViewerHeader({
   onToggleRaw,
   isDirty,
   isSaving,
-  onSave
+  onSave,
+  canEdit = false
 }: FileViewerHeaderProps) {
   return (
     <div
@@ -81,8 +83,8 @@ export function FileViewerHeader({
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
             >
-              <i className={`fas fa-${showRaw ? 'eye' : 'code'} mr-1`}></i>
-              {showRaw ? 'Show Rendered' : 'Show Raw'}
+              <i className={`fas fa-${showRaw ? (canEdit ? 'times' : 'eye') : (canEdit ? 'edit' : 'code')} mr-1`}></i>
+              {showRaw ? (canEdit ? 'Cancel' : 'Show Rendered') : (canEdit ? 'Edit' : 'Show Raw')}
             </button>
           )}
         </div>

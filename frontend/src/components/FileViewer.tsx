@@ -164,6 +164,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
         isDirty={isDirty && showRaw && canEdit}
         isSaving={isSaving}
         onSave={handleSaveClick}
+        canEdit={canEdit}
       />
 
       <div
