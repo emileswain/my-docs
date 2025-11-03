@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
 import { FileViewerHeader } from './FileViewerHeader';
@@ -6,16 +7,25 @@ import { JsonViewer } from './viewers/JsonViewer';
 import { YamlViewer } from './viewers/YamlViewer';
 import { MermaidViewer } from './viewers/MermaidViewer';
 import { RawViewer } from './viewers/RawViewer';
+import { EditableRawViewer, type EditableRawViewerRef } from './viewers/EditableRawViewer';
 import { useScrollPosition } from '../hooks/useScrollPosition';
+import { fileService } from '../services/fileService';
+import { addToFileHistory } from '../utils/fileHistory';
 
 interface FileViewerProps {
   contentAreaRef: React.RefObject<HTMLDivElement | null>;
+  onHistoryLoad?: (callback: (content: string) => void) => void;
 }
 
-export function FileViewer({ contentAreaRef }: FileViewerProps) {
+export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
+  const editorRef = useRef<EditableRawViewerRef>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const currentFile = useProjectStore((state) => state.currentFile);
   const currentFileName = useProjectStore((state) => state.currentFileName);
   const currentFileContent = useProjectStore((state) => state.currentFileContent);
+  const currentProject = useProjectStore((state) => state.currentProject);
 
   const showRaw = useAppStore((state) => state.showRaw);
   const setShowRaw = useAppStore((state) => state.setShowRaw);
@@ -24,23 +34,89 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
 
   const darkMode = useAppStore((state) => state.darkMode);
 
+  // Expose history loading callback to parent
+  useScrollPosition(currentFile, contentAreaRef);
+
+  const handleLoadHistory = (content: string) => {
+    editorRef.current?.loadHistoricalContent(content);
+  };
+
+  // Register callback with parent via effect
+  useEffect(() => {
+    if (onHistoryLoad) {
+      onHistoryLoad(handleLoadHistory);
+    }
+  }, [onHistoryLoad]);
+
   const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
   const isMarkdown = extension === '.md' && !!currentFileContent?.html;
   const isJson = extension === '.json';
   const isYaml = extension === '.yml' || extension === '.yaml';
   const isMermaid = extension === '.mmd';
   const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid;
+  const canEdit = isMarkdown || isJson || isYaml; // Can edit markdown, json, yaml
 
-  useScrollPosition(currentFile, contentAreaRef);
+  // Warn user about unsaved changes when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty && showRaw && canEdit) {
+        e.preventDefault();
+        // Modern browsers require returnValue to be set
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, showRaw, canEdit]);
 
   const toggleView = () => {
     setShowRaw(!showRaw);
+  };
+
+  const handleSave = async (content: string) => {
+    if (!currentFile || !currentProject) return;
+
+    setIsSaving(true);
+    try {
+      await fileService.saveFile(currentFile, content);
+
+      // Save to history
+      addToFileHistory(currentProject.id, currentFile, content);
+
+      // TODO: Show success notification
+      console.log('File saved successfully');
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      // TODO: Show error notification
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveClick = () => {
+    // Trigger save on the editor via ref
+    editorRef.current?.triggerSave();
   };
 
   const renderContent = () => {
     if (!currentFileContent) return null;
 
     if (showRaw) {
+      // Use editable viewer for markdown, json, yaml
+      if (canEdit && currentFile) {
+        return (
+          <EditableRawViewer
+            ref={editorRef}
+            content={currentFileContent.content}
+            filePath={currentFile}
+            onSave={handleSave}
+            onDirtyChange={setIsDirty}
+          />
+        );
+      }
       return <RawViewer content={currentFileContent.content} />;
     }
 
@@ -85,6 +161,9 @@ export function FileViewer({ contentAreaRef }: FileViewerProps) {
         canToggleRaw={canToggleRaw}
         showRaw={showRaw}
         onToggleRaw={toggleView}
+        isDirty={isDirty && showRaw && canEdit}
+        isSaving={isSaving}
+        onSave={handleSaveClick}
       />
 
       <div

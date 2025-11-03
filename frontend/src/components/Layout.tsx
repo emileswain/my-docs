@@ -15,13 +15,13 @@ export function Layout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const contentAreaRef = useRef<HTMLDivElement>(null);
+  const [historyLoadCallback, setHistoryLoadCallback] = useState<((content: string) => void) | null>(null);
 
   const { projects, loadProjects } = useProjects();
   const { loadFile } = useFileContent();
 
   const currentProject = useProjectStore((state) => state.currentProject);
   const setCurrentProject = useProjectStore((state) => state.setCurrentProject);
-  const setCurrentFile = useProjectStore((state) => state.setCurrentFile);
   const setOpenFolders = useProjectStore((state) => state.setOpenFolders);
 
   const darkMode = useAppStore((state) => state.darkMode);
@@ -102,8 +102,14 @@ export function Layout() {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         <FileTree onFileSelect={handleFileSelect} />
-        <FileViewer contentAreaRef={contentAreaRef} />
-        <StructureTree contentAreaRef={contentAreaRef} />
+        <FileViewer
+          contentAreaRef={contentAreaRef}
+          onHistoryLoad={(callback) => setHistoryLoadCallback(() => callback)}
+        />
+        <StructureTree
+          contentAreaRef={contentAreaRef}
+          onLoadHistory={historyLoadCallback || undefined}
+        />
       </div>
     </div>
   );

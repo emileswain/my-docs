@@ -4,6 +4,9 @@ interface FileViewerHeaderProps {
   canToggleRaw: boolean;
   showRaw: boolean;
   onToggleRaw: () => void;
+  isDirty?: boolean;
+  isSaving?: boolean;
+  onSave?: () => void;
 }
 
 export function FileViewerHeader({
@@ -11,7 +14,10 @@ export function FileViewerHeader({
   currentHeading,
   canToggleRaw,
   showRaw,
-  onToggleRaw
+  onToggleRaw,
+  isDirty,
+  isSaving,
+  onSave
 }: FileViewerHeaderProps) {
   return (
     <div
@@ -29,6 +35,14 @@ export function FileViewerHeader({
             style={{ color: 'var(--text-primary)' }}
           >
             {fileName || ''}
+            {isDirty && (
+              <span
+                className="ml-2 text-xs font-normal"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                (unsaved)
+              </span>
+            )}
           </h2>
           <p
             className="text-xs truncate mt-0.5"
@@ -37,7 +51,24 @@ export function FileViewerHeader({
             {currentHeading}
           </p>
         </div>
-        <div className="ml-4 flex-shrink-0">
+        <div className="ml-4 flex-shrink-0 flex gap-2">
+          {isDirty && onSave && (
+            <button
+              onClick={onSave}
+              disabled={isSaving}
+              className="px-3 py-1 text-sm rounded"
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: 'white',
+                transition: 'opacity 0.15s',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                opacity: isSaving ? 0.6 : 1
+              }}
+            >
+              <i className={`fas fa-${isSaving ? 'spinner fa-spin' : 'save'} mr-1`}></i>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          )}
           {canToggleRaw && (
             <button
               onClick={onToggleRaw}

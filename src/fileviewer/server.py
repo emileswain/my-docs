@@ -296,7 +296,7 @@ def stream_events():
     )
 
 
-@app.route('/api/file/<path:file_path>')
+@app.route('/api/file/<path:file_path>', methods=['GET'])
 def get_file_tree(file_path):
     """Get tree structure of a file's contents."""
     file_path = '/' + file_path
@@ -327,6 +327,52 @@ def get_file_tree(file_path):
             'html': html_content,
             'type': Path(file_path).suffix.lower()
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/file/<path:file_path>', methods=['PUT'])
+def save_file(file_path):
+    """Save file content."""
+    from flask import request
+    file_path = '/' + file_path
+
+    # Check if file is in a watched project
+    pm = app.config['project_manager']
+    project_id = None
+    for project in pm.get_all_projects():
+        if file_path.startswith(project.path):
+            project_id = project.project_id
+            break
+
+    if not project_id:
+        return jsonify({'error': 'File not in watched project'}), 403
+
+    try:
+        data = request.json
+        content = data.get('content')
+
+        if content is None:
+            return jsonify({'error': 'No content provided'}), 400
+
+        # Verify file exists (security - don't allow creating new files outside structure)
+        file_obj = Path(file_path)
+        if not file_obj.exists():
+            return jsonify({'error': 'File does not exist'}), 404
+
+        # Write content to file
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        # Broadcast change event to SSE clients
+        broadcast_change('modified', file_path, project_id)
+
+        return jsonify({
+            'success': True,
+            'message': 'File saved successfully'
+        })
+    except PermissionError:
+        return jsonify({'error': 'Permission denied writing to file'}), 403
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -51,8 +51,7 @@ export function useFileTree(projectId: string | null) {
     setIsLoading(true);
     try {
       const { cache, rootItems } = await fileService.browseAllFolders(
-        project.id,
-        project.path
+        project.id
       );
 
       setFileTreeCache(projectId, {

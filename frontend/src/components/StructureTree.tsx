@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { TreeNode } from '../types';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
+import { FileHistory } from './FileHistory';
 
 interface StructureTreeNodeProps {
   node: TreeNode;
@@ -78,13 +79,21 @@ function StructureTreeNode({ node, depth, onSectionClick, currentHeading }: Stru
 
 interface StructureTreeProps {
   contentAreaRef: React.RefObject<HTMLDivElement | null>;
+  onLoadHistory?: (content: string) => void;
 }
 
-export function StructureTree({ contentAreaRef }: StructureTreeProps) {
+export function StructureTree({ contentAreaRef, onLoadHistory }: StructureTreeProps) {
+  const currentFile = useProjectStore((state) => state.currentFile);
   const currentFileContent = useProjectStore((state) => state.currentFileContent);
   const currentHeading = useAppStore((state) => state.currentHeading);
   const rightPanelVisible = useAppStore((state) => state.rightPanelVisible);
   const setRightPanelVisible = useAppStore((state) => state.setRightPanelVisible);
+  const showRaw = useAppStore((state) => state.showRaw);
+
+  // Determine if we're in edit mode (raw view for editable files)
+  const extension = currentFile ? currentFile.substring(currentFile.lastIndexOf('.')).toLowerCase() : '';
+  const isEditable = extension === '.md' || extension === '.json' || extension === '.yml' || extension === '.yaml';
+  const isEditMode = showRaw && isEditable;
 
   const scrollToSection = (label: string) => {
     const contentArea = contentAreaRef.current;
@@ -155,7 +164,7 @@ export function StructureTree({ contentAreaRef }: StructureTreeProps) {
           className="text-xs font-semibold uppercase tracking-wide"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Structure
+          {isEditMode ? 'History' : 'Structure'}
         </h2>
         <button
           onClick={() => setRightPanelVisible(false)}
@@ -168,19 +177,25 @@ export function StructureTree({ contentAreaRef }: StructureTreeProps) {
           </svg>
         </button>
       </div>
-      <div className="text-sm p-4 flex-1 overflow-y-auto">
-        {!tree || tree.length === 0 ? (
-          <p className="italic text-sm" style={{ color: 'var(--text-tertiary)' }}>No structure found</p>
+      <div className="text-sm flex-1 overflow-y-auto">
+        {isEditMode ? (
+          <FileHistory onLoadHistory={onLoadHistory || (() => {})} />
         ) : (
-          tree.map((node, index) => (
-            <StructureTreeNode
-              key={index}
-              node={node}
-              depth={1}
-              onSectionClick={scrollToSection}
-              currentHeading={currentHeading}
-            />
-          ))
+          <div className="p-4">
+            {!tree || tree.length === 0 ? (
+              <p className="italic text-sm" style={{ color: 'var(--text-tertiary)' }}>No structure found</p>
+            ) : (
+              tree.map((node, index) => (
+                <StructureTreeNode
+                  key={index}
+                  node={node}
+                  depth={1}
+                  onSectionClick={scrollToSection}
+                  currentHeading={currentHeading}
+                />
+              ))
+            )}
+          </div>
         )}
       </div>
     </div>
