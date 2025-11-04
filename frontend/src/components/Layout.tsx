@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Navigation } from './common/Navigation';
 import { FileTree } from './FileTree';
 import { FileViewer } from './FileViewer';
@@ -13,7 +13,8 @@ import type { Project } from '../types';
 
 export function Layout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { projectSlug, '*': filePath } = useParams();
+  const navigate = useNavigate();
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadCallbackRef = useRef<((content: string) => void) | null>(null);
 
@@ -36,10 +37,8 @@ export function Layout() {
   useEffect(() => {
     if (projects.length === 0) return;
 
-    const projectParam = searchParams.get('project');
-
-    if (projectParam) {
-      const project = projects.find((p) => p.slug === projectParam || p.id === projectParam);
+    if (projectSlug) {
+      const project = projects.find((p) => p.slug === projectSlug || p.id === projectSlug);
       if (project && project.id !== currentProject?.id) {
         selectProject(project, false);
       }
@@ -52,18 +51,27 @@ export function Layout() {
         }
       }
     }
-  }, [projects, searchParams]);
+  }, [projects, projectSlug]);
 
-  // Restore previously selected file when project loads
+  // Handle file selection from URL or localStorage
   useEffect(() => {
     if (!currentProject) return;
 
-    const savedFile = localStorage.getItem('currentFile');
-    if (savedFile && savedFile.startsWith(currentProject.path)) {
-      const fileName = savedFile.split('/').pop() || '';
-      handleFileSelect(savedFile, fileName);
+    if (filePath) {
+      // Construct full path from URL
+      const fullPath = `${currentProject.path}/${filePath}`;
+      const fileName = filePath.split('/').pop() || '';
+      // Load file without updating URL (we're already at the URL)
+      loadFileWithoutUrlUpdate(fullPath, fileName);
+    } else {
+      // Restore previously selected file from localStorage
+      const savedFile = localStorage.getItem('currentFile');
+      if (savedFile && savedFile.startsWith(currentProject.path)) {
+        const fileName = savedFile.split('/').pop() || '';
+        loadFileWithoutUrlUpdate(savedFile, fileName);
+      }
     }
-  }, [currentProject]);
+  }, [currentProject, filePath, loadFile]);
 
   const selectProject = async (project: Project, updateUrl = true) => {
     setCurrentProject(project);
@@ -74,13 +82,28 @@ export function Layout() {
     setOpenFolders(project.id, openFolders);
 
     if (updateUrl) {
-      setSearchParams({ project: project.slug });
+      navigate(`/${project.slug}`);
+    }
+  };
+
+  const loadFileWithoutUrlUpdate = async (path: string, name: string) => {
+    try {
+      await loadFile(path, name);
+    } catch (error) {
+      console.error('Error loading file:', error);
     }
   };
 
   const handleFileSelect = async (path: string, name: string) => {
     try {
       await loadFile(path, name);
+
+      // Update URL to reflect the selected file
+      if (currentProject) {
+        // Remove project path prefix to get relative path
+        const relativePath = path.replace(`${currentProject.path}/`, '');
+        navigate(`/${currentProject.slug}/${relativePath}`);
+      }
     } catch (error) {
       console.error('Error loading file:', error);
     }

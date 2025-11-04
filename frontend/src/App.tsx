@@ -21,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/:projectSlug/*" element={<Layout />} />
       </Routes>
     </BrowserRouter>
   );
