@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Navigation } from './common/Navigation';
 import { FileTree } from './FileTree';
@@ -15,7 +15,7 @@ export function Layout() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const contentAreaRef = useRef<HTMLDivElement>(null);
-  const [historyLoadCallback, setHistoryLoadCallback] = useState<((content: string) => void) | null>(null);
+  const historyLoadCallbackRef = useRef<((content: string) => void) | null>(null);
 
   const { projects, loadProjects } = useProjects();
   const { loadFile } = useFileContent();
@@ -86,6 +86,16 @@ export function Layout() {
     }
   };
 
+  const handleHistoryLoad = useCallback((callback: (content: string) => void) => {
+    historyLoadCallbackRef.current = callback;
+  }, []);
+
+  const handleLoadHistory = useCallback((content: string) => {
+    if (historyLoadCallbackRef.current) {
+      historyLoadCallbackRef.current(content);
+    }
+  }, []);
+
   return (
     <div className="h-screen flex flex-col">
       {/* Top Navigation */}
@@ -104,11 +114,11 @@ export function Layout() {
         <FileTree onFileSelect={handleFileSelect} />
         <FileViewer
           contentAreaRef={contentAreaRef}
-          onHistoryLoad={(callback) => setHistoryLoadCallback(() => callback)}
+          onHistoryLoad={handleHistoryLoad}
         />
         <StructureTree
           contentAreaRef={contentAreaRef}
-          onLoadHistory={historyLoadCallback || undefined}
+          onLoadHistory={handleLoadHistory}
         />
       </div>
     </div>

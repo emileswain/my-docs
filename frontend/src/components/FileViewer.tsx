@@ -6,6 +6,7 @@ import { MarkdownViewer } from './viewers/MarkdownViewer';
 import { JsonViewer } from './viewers/JsonViewer';
 import { YamlViewer } from './viewers/YamlViewer';
 import { MermaidViewer } from './viewers/MermaidViewer';
+import { MermaidModal } from './viewers/MermaidModal';
 import { RawViewer } from './viewers/RawViewer';
 import { EditableRawViewer, type EditableRawViewerRef } from './viewers/EditableRawViewer';
 import { useScrollPosition } from '../hooks/useScrollPosition';
@@ -21,6 +22,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
   const editorRef = useRef<EditableRawViewerRef>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [fullscreenMermaid, setFullscreenMermaid] = useState<string | null>(null);
 
   const currentFile = useProjectStore((state) => state.currentFile);
   const currentFileName = useProjectStore((state) => state.currentFileName);
@@ -144,7 +146,10 @@ export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
 
     if (isMermaid) {
       return (
-        <div style={{ height: '100%', width: '100%' }}>
+        <div
+          style={{ height: '100%', width: '100%', cursor: 'pointer' }}
+          onClick={() => setFullscreenMermaid(currentFileContent.content)}
+        >
           <MermaidViewer content={currentFileContent.content} darkMode={darkMode} />
         </div>
       );
@@ -188,6 +193,15 @@ export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
           renderContent()
         )}
       </div>
+
+      {/* Fullscreen Mermaid Modal */}
+      {fullscreenMermaid && (
+        <MermaidModal
+          content={fullscreenMermaid}
+          darkMode={darkMode}
+          onClose={() => setFullscreenMermaid(null)}
+        />
+      )}
     </div>
   );
 }
