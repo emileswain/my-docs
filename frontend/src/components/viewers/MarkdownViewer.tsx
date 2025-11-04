@@ -8,13 +8,14 @@ interface MarkdownViewerProps {
   contentAreaRef: React.RefObject<HTMLDivElement | null>;
   onHeadingChange: (heading: string) => void;
   currentFile: string | null;
+  onNavigate?: (path: string, name: string) => void;
 }
 
 interface ProcessedContent {
   parts: Array<{ type: 'html' | 'mermaid'; content: string; id?: string }>;
 }
 
-export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile }: MarkdownViewerProps) {
+export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentFile, onNavigate }: MarkdownViewerProps) {
   const darkMode = useAppStore((state) => state.darkMode);
   const [fullscreenMermaid, setFullscreenMermaid] = useState<{ content: string; id: string } | null>(null);
 
@@ -69,6 +70,7 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
     if (contentAreaRef.current) {
       setupHeaderTracking();
       setupCopyButtons();
+      setupLinkHandling();
 
       return () => {
         const contentArea = contentAreaRef.current;
@@ -77,10 +79,14 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
           if (scrollHandler) {
             contentArea.removeEventListener('scroll', scrollHandler);
           }
+          const linkHandler = (contentArea as any).__linkHandler;
+          if (linkHandler) {
+            contentArea.removeEventListener('click', linkHandler);
+          }
         }
       };
     }
-  }, [html]);
+  }, [html, currentFile, onNavigate]);
 
   const setupHeaderTracking = () => {
     const contentArea = contentAreaRef.current;
@@ -166,6 +172,74 @@ export function MarkdownViewer({ html, contentAreaRef, onHeadingChange, currentF
     };
 
     contentArea.addEventListener('click', handleCopyClick);
+  };
+
+  const setupLinkHandling = () => {
+    const contentArea = contentAreaRef.current;
+    if (!contentArea) return;
+
+    // Remove old link handler
+    const oldHandler = (contentArea as any).__linkHandler;
+    if (oldHandler) {
+      contentArea.removeEventListener('click', oldHandler);
+    }
+
+    const handleLinkClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+
+      if (!anchor || !onNavigate || !currentFile) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      // Check if it's an external link (has protocol)
+      if (href.match(/^[a-z]+:\/\//i) || href.startsWith('mailto:')) {
+        // Let external links open in new tab
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+        return;
+      }
+
+      // Check if it's a hash link (same page anchor)
+      if (href.startsWith('#')) {
+        return; // Let default behavior handle it
+      }
+
+      // It's a relative link - handle it
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Resolve the relative path
+      const currentDir = currentFile.substring(0, currentFile.lastIndexOf('/'));
+      let resolvedPath = href;
+
+      // If href starts with /, it's relative to project root
+      if (!href.startsWith('/')) {
+        // Resolve relative to current directory
+        const parts = currentDir.split('/');
+        const hrefParts = href.split('/');
+
+        for (const part of hrefParts) {
+          if (part === '..') {
+            parts.pop();
+          } else if (part !== '.') {
+            parts.push(part);
+          }
+        }
+
+        resolvedPath = parts.join('/');
+      }
+
+      // Extract filename from path
+      const fileName = resolvedPath.substring(resolvedPath.lastIndexOf('/') + 1);
+
+      // Navigate to the new file
+      onNavigate(resolvedPath, fileName);
+    };
+
+    (contentArea as any).__linkHandler = handleLinkClick;
+    contentArea.addEventListener('click', handleLinkClick);
   };
 
   return (

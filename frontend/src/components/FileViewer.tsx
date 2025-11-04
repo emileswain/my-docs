@@ -16,9 +16,10 @@ import { addToFileHistory } from '../utils/fileHistory';
 interface FileViewerProps {
   contentAreaRef: React.RefObject<HTMLDivElement | null>;
   onHistoryLoad?: (callback: (content: string) => void) => void;
+  onNavigate?: (path: string, name: string) => void;
 }
 
-export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
+export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileViewerProps) {
   const editorRef = useRef<EditableRawViewerRef>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -132,6 +133,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
           contentAreaRef={contentAreaRef}
           onHeadingChange={setCurrentHeading}
           currentFile={currentFile}
+          onNavigate={onNavigate}
         />
       );
     }

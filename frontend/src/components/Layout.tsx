@@ -115,6 +115,7 @@ export function Layout() {
         <FileViewer
           contentAreaRef={contentAreaRef}
           onHistoryLoad={handleHistoryLoad}
+          onNavigate={handleFileSelect}
         />
         <StructureTree
           contentAreaRef={contentAreaRef}

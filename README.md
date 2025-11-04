@@ -11,6 +11,10 @@ I was using mkdocs to review markdown files, but needed some extra functionality
 
 It started off like it was writing code in notepad++. I mean it worked, but also it was putting nearly everything in one massive file. So i tamed it a bit.
 
+## Documentation
+
+For more detailed documentation, see [docs/README.md](docs/README.md).
+
 ## Features
 
 - Web-based file browser with real-time file system monitoring via SSE
