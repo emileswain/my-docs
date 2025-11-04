@@ -85,6 +85,9 @@ export function FileViewer({ contentAreaRef, onHistoryLoad }: FileViewerProps) {
       // Save to history
       addToFileHistory(currentProject.id, currentFile, content);
 
+      // Exit edit mode after successful save
+      setShowRaw(false);
+
       // TODO: Show success notification
       console.log('File saved successfully');
     } catch (error) {
