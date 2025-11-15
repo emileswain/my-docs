@@ -1,15 +1,13 @@
-.PHONY: help install dev run clean test lint format venv build-css watch-css kill-ports dev-frontend dev-backend build
+.PHONY: help install dev run clean test lint format venv kill-ports dev-frontend dev-backend build
 
 help:
 	@echo "Available commands:"
 	@echo "  make venv          - Create a virtual environment with uv"
-	@echo "  make install       - Install project with dependencies and build assets"
+	@echo "  make install       - Install project with dependencies"
 	@echo "  make dev           - Run development servers (React + Flask) with auto-reload"
 	@echo "  make dev-frontend  - Run React dev server only"
 	@echo "  make dev-backend   - Run Flask API server only"
 	@echo "  make build         - Build React app for production"
-	@echo "  make build-css     - Build Tailwind CSS"
-	@echo "  make watch-css     - Watch and rebuild CSS on changes"
 	@echo "  make run           - Run the file viewer server in production mode"
 	@echo "  make kill-ports    - Kill any processes on ports 3000 and 6060"
 	@echo "  make clean         - Remove build artifacts and cache files"
@@ -22,9 +20,7 @@ venv:
 
 install: venv
 	uv pip install -e ".[dev]"
-	npm install
 	cd frontend && npm install
-	npm run build:css
 
 kill-ports:
 	@echo "Killing any processes on ports 3000 and 6060..."
@@ -55,13 +51,7 @@ build:
 	cd frontend && npm run build
 	@echo "React app built to src/fileviewer/static/dist/"
 
-build-css:
-	npm run build:css
-
-watch-css:
-	npm run watch:css
-
-run: build build-css
+run: build
 	@echo "Starting production server..."
 	FLASK_ENV=production uv run fileviewer
 
