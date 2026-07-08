@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { JUnitData, JUnitTestCase } from '../../types';
+
+type StatusFilter = 'all' | 'passed' | 'failed' | 'errored' | 'skipped';
+type SortMode = 'default' | 'name' | 'duration' | 'status';
 
 interface JUnitViewerProps {
   junit: JUnitData;
 }
+
+const STATUS_ORDER: Record<string, number> = {
+  failed: 0,
+  errored: 1,
+  skipped: 2,
+  passed: 3,
+};
 
 function StatusIcon({ status }: { status: JUnitTestCase['status'] }) {
   switch (status) {
@@ -108,7 +118,46 @@ function TestCaseRow({ tc }: { tc: JUnitTestCase }) {
   );
 }
 
+const FILTER_OPTIONS: { value: StatusFilter; label: string; icon: string; color: string }[] = [
+  { value: 'all', label: 'All', icon: 'fa-list', color: 'var(--text-secondary)' },
+  { value: 'failed', label: 'Failed', icon: 'fa-times-circle', color: '#ef4444' },
+  { value: 'errored', label: 'Errors', icon: 'fa-exclamation-circle', color: '#ef4444' },
+  { value: 'passed', label: 'Passed', icon: 'fa-check-circle', color: '#22c55e' },
+  { value: 'skipped', label: 'Skipped', icon: 'fa-minus-circle', color: '#9ca3af' },
+];
+
+const SORT_OPTIONS: { value: SortMode; label: string; icon: string }[] = [
+  { value: 'default', label: 'Default', icon: 'fa-sort' },
+  { value: 'status', label: 'Status', icon: 'fa-flag' },
+  { value: 'name', label: 'Name', icon: 'fa-font' },
+  { value: 'duration', label: 'Duration', icon: 'fa-clock' },
+];
+
+function filterAndSort(testcases: JUnitTestCase[], filter: StatusFilter, sort: SortMode): JUnitTestCase[] {
+  let filtered = filter === 'all'
+    ? testcases
+    : testcases.filter(tc => tc.status === filter);
+
+  if (sort === 'default') return filtered;
+
+  return [...filtered].sort((a, b) => {
+    switch (sort) {
+      case 'status':
+        return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+      case 'name':
+        return a.name.localeCompare(b.name);
+      case 'duration':
+        return (b.time ?? 0) - (a.time ?? 0);
+      default:
+        return 0;
+    }
+  });
+}
+
 export function JUnitViewer({ junit }: JUnitViewerProps) {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+
   const { summary } = junit;
   const allPassed = summary.failures === 0 && summary.errors === 0;
 
@@ -116,6 +165,18 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
   const failPercent = summary.tests > 0 ? (summary.failures / summary.tests) * 100 : 0;
   const errorPercent = summary.tests > 0 ? (summary.errors / summary.tests) * 100 : 0;
   const skipPercent = summary.tests > 0 ? (summary.skipped / summary.tests) * 100 : 0;
+
+  // Count how many tests match each filter across all suites
+  const filterCounts = useMemo(() => {
+    const counts: Record<StatusFilter, number> = { all: 0, passed: 0, failed: 0, errored: 0, skipped: 0 };
+    for (const suite of junit.testsuites) {
+      for (const tc of suite.testcases) {
+        counts.all++;
+        counts[tc.status]++;
+      }
+    }
+    return counts;
+  }, [junit]);
 
   return (
     <div>
@@ -182,45 +243,123 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
         </div>
       </div>
 
+      {/* Filter & Sort toolbar */}
+      <div
+        className="flex items-center justify-between mb-4 rounded-lg px-3 py-2"
+        style={{
+          backgroundColor: 'var(--bg-tertiary)',
+          border: '1px solid var(--border-primary)',
+        }}
+      >
+        {/* Status filter pills */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Filter:</span>
+          {FILTER_OPTIONS.map((opt) => {
+            const count = filterCounts[opt.value];
+            if (opt.value !== 'all' && count === 0) return null;
+            const isActive = statusFilter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setStatusFilter(opt.value)}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors"
+                style={{
+                  backgroundColor: isActive ? 'var(--accent-secondary)' : 'transparent',
+                  color: isActive ? opt.color : 'var(--text-tertiary)',
+                  border: isActive ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                }}
+              >
+                <i className={`fas ${opt.icon}`} style={{ fontSize: '10px' }} />
+                <span>{opt.label}</span>
+                <span
+                  className="font-semibold"
+                  style={{ color: isActive ? opt.color : 'var(--text-tertiary)' }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort selector */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Sort:</span>
+          {SORT_OPTIONS.map((opt) => {
+            const isActive = sortMode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setSortMode(opt.value)}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors"
+                style={{
+                  backgroundColor: isActive ? 'var(--accent-secondary)' : 'transparent',
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                  border: isActive ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                }}
+              >
+                <i className={`fas ${opt.icon}`} style={{ fontSize: '10px' }} />
+                <span>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Test suites */}
-      {junit.testsuites.map((suite, si) => (
-        <div
-          key={si}
-          className="rounded-lg mb-4 overflow-hidden"
-          style={{
-            border: '1px solid var(--border-primary)',
-            backgroundColor: 'var(--bg-tertiary)',
-          }}
-        >
+      {junit.testsuites.map((suite, si) => {
+        const filteredTests = filterAndSort(suite.testcases, statusFilter, sortMode);
+        if (filteredTests.length === 0 && statusFilter !== 'all') return null;
+
+        return (
           <div
-            className="px-4 py-3 flex items-center justify-between"
+            key={si}
+            className="rounded-lg mb-4 overflow-hidden"
             style={{
-              borderBottom: '1px solid var(--border-primary)',
-              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-primary)',
+              backgroundColor: 'var(--bg-tertiary)',
             }}
           >
-            <span
-              className="text-sm font-semibold"
-              style={{ color: 'var(--text-primary)' }}
+            <div
+              className="px-4 py-3 flex items-center justify-between"
+              style={{
+                borderBottom: '1px solid var(--border-primary)',
+                backgroundColor: 'var(--bg-secondary)',
+              }}
             >
-              {suite.name}
-            </span>
-            <span
-              className="text-xs"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              {suite.tests - suite.failures - suite.errors - suite.skipped}/{suite.tests} passed
-              {' · '}
-              {formatDuration(suite.time)}
-            </span>
+              <span
+                className="text-sm font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {suite.name}
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                {statusFilter !== 'all' ? `${filteredTests.length} shown · ` : ''}
+                {suite.tests - suite.failures - suite.errors - suite.skipped}/{suite.tests} passed
+                {' · '}
+                {formatDuration(suite.time)}
+              </span>
+            </div>
+            <div>
+              {filteredTests.length === 0 ? (
+                <p
+                  className="text-sm italic px-4 py-4 text-center"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  No matching tests
+                </p>
+              ) : (
+                filteredTests.map((tc, ti) => (
+                  <TestCaseRow key={ti} tc={tc} />
+                ))
+              )}
+            </div>
           </div>
-          <div>
-            {suite.testcases.map((tc, ti) => (
-              <TestCaseRow key={ti} tc={tc} />
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

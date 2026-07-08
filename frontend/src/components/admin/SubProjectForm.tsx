@@ -1,40 +1,34 @@
 import { useState } from 'react';
-import type { SubProject } from '../../types';
+import type { SubProject, SubprojectType } from '../../types';
+import { SUBPROJECT_TYPE_ICONS } from '../../types';
 import type { CreateSubProjectDto, UpdateSubProjectDto } from '../../services/projectService';
 
-/**
- * ProjectForm - Form component for creating or editing projects
- *
- * Purpose:
- * - Provides a reusable form for project data entry
- * - Handles both create and edit modes
- * - Validates required fields before submission
- *
- * Used by:
- * - Admin component (in modal for add/edit operations)
- *
- * Props:
- * - project: Project being edited (null for create mode)
- * - onSubmit: Callback when form is submitted with valid data
- * - onCancel: Callback when cancel button is clicked
- *
- * Special considerations:
- * - Title and path are required fields
- * - Description is optional
- * - Form data is controlled internally
- * - Emits CreateProjectDto or UpdateProjectDto on submit
- */
-interface ProjectFormProps {
-  project?: SubProject | null;
+interface SubProjectFormProps {
+  subProject?: SubProject | null;
   onSubmit: (data: CreateSubProjectDto | UpdateSubProjectDto) => void;
   onCancel: () => void;
 }
 
-export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
+const TYPE_OPTIONS: { value: SubprojectType; label: string }[] = [
+  { value: 'web', label: 'Web' },
+  { value: 'mobile', label: 'Mobile' },
+  { value: 'firmware', label: 'Firmware' },
+  { value: 'services', label: 'Services / API' },
+  { value: 'docs', label: 'Documentation' },
+  { value: 'desktop', label: 'Desktop' },
+  { value: 'database', label: 'Database' },
+  { value: 'cloud', label: 'Cloud / Infra' },
+  { value: 'testing', label: 'Testing' },
+  { value: 'design', label: 'Design' },
+  { value: 'workspace', label: 'Workspace' },
+];
+
+export function SubProjectForm({ subProject, onSubmit, onCancel }: SubProjectFormProps) {
   const [formData, setFormData] = useState({
-    title: project?.title || '',
-    description: project?.description || '',
-    path: project?.path || '',
+    title: subProject?.title || '',
+    description: subProject?.description || '',
+    path: subProject?.path || '',
+    type: (subProject?.type || 'web') as SubprojectType,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -64,17 +58,46 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             border: '1px solid var(--border-primary)',
             backgroundColor: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
-            borderColor: 'var(--border-focus)'
+            borderColor: 'var(--border-focus)',
           }}
-          placeholder="My Project"
+          placeholder="e.g., Device, Mobile App"
         />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+          Type
+        </label>
+        <div className="grid grid-cols-4 gap-2">
+          {TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFormData({ ...formData, type: opt.value })}
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+              style={{
+                border: formData.type === opt.value
+                  ? '2px solid var(--accent-primary)'
+                  : '1px solid var(--border-primary)',
+                backgroundColor: formData.type === opt.value
+                  ? 'var(--accent-secondary)'
+                  : 'var(--bg-secondary)',
+                color: formData.type === opt.value
+                  ? 'var(--accent-primary)'
+                  : 'var(--text-primary)',
+              }}
+            >
+              <i className={`fas ${SUBPROJECT_TYPE_ICONS[opt.value]} text-xs`}></i>
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
       <div>
         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
           Description
         </label>
         <textarea
-          rows={3}
+          rows={2}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           className="w-full px-4 py-2 rounded-md focus:outline-none focus:ring-2"
@@ -82,9 +105,9 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             border: '1px solid var(--border-primary)',
             backgroundColor: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
-            borderColor: 'var(--border-focus)'
+            borderColor: 'var(--border-focus)',
           }}
-          placeholder="Project description..."
+          placeholder="Optional description..."
         />
       </div>
       <div>
@@ -101,7 +124,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             border: '1px solid var(--border-primary)',
             backgroundColor: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
-            borderColor: 'var(--border-focus)'
+            borderColor: 'var(--border-focus)',
           }}
           placeholder="/path/to/project"
         />
@@ -116,7 +139,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           className="px-4 py-2 rounded-md"
           style={{
             color: 'var(--text-primary)',
-            backgroundColor: 'var(--bg-tertiary)'
+            backgroundColor: 'var(--bg-tertiary)',
           }}
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
@@ -129,12 +152,12 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           style={{
             backgroundColor: 'var(--accent-primary)',
             color: 'white',
-            borderColor: 'var(--border-focus)'
+            borderColor: 'var(--border-focus)',
           }}
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary-hover)'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
         >
-          {project ? 'Save Changes' : 'Add Project'}
+          {subProject ? 'Save Changes' : 'Add Sub-project'}
         </button>
       </div>
     </form>

@@ -1,87 +1,101 @@
 import { useCallback } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { projectService } from '../services/projectService';
-import type { CreateProjectDto, UpdateProjectDto } from '../services/projectService';
+import type { CreateGroupDto, UpdateGroupDto, CreateSubProjectDto, UpdateSubProjectDto } from '../services/projectService';
 
-/**
- * useProjects - Custom hook for managing project operations
- *
- * Purpose:
- * - Provides business logic for project CRUD operations
- * - Connects ProjectService (API) with ProjectStore (state)
- * - Handles loading, creating, updating, and deleting projects
- *
- * Used by:
- * - Admin component (full CRUD operations)
- * - Layout component (loading projects on mount)
- *
- * Returns:
- * - projects: Current list of projects from store
- * - loadProjects: Fetches all projects from API and updates store
- * - createProject: Creates new project and adds to store
- * - updateProject: Updates existing project in API and store
- * - deleteProject: Deletes project from API and removes from store
- *
- * Special considerations:
- * - All async operations throw errors on failure
- * - Store is automatically updated on successful operations
- * - Errors are logged to console but must be caught by caller for UI feedback
- */
 export function useProjects() {
-  const projects = useProjectStore((state) => state.projects);
-  const setProjects = useProjectStore((state) => state.setProjects);
-  const addProject = useProjectStore((state) => state.addProject);
-  const updateProjectInStore = useProjectStore((state) => state.updateProject);
-  const removeProjectFromStore = useProjectStore((state) => state.removeProject);
+  const groups = useProjectStore((state) => state.groups);
+  const setGroups = useProjectStore((state) => state.setGroups);
+  const addGroupToStore = useProjectStore((state) => state.addGroup);
+  const updateGroupInStore = useProjectStore((state) => state.updateGroup);
+  const removeGroupFromStore = useProjectStore((state) => state.removeGroup);
+  const addSubProjectToStore = useProjectStore((state) => state.addSubProject);
+  const updateSubProjectInStore = useProjectStore((state) => state.updateSubProject);
+  const removeSubProjectFromStore = useProjectStore((state) => state.removeSubProject);
 
-  const loadProjects = useCallback(async () => {
+  const loadGroups = useCallback(async () => {
     try {
-      const data = await projectService.fetchProjects();
-      setProjects(data);
+      const data = await projectService.fetchGroups();
+      setGroups(data);
       return data;
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.error('Error loading groups:', error);
       throw error;
     }
-  }, [setProjects]);
+  }, [setGroups]);
 
-  const createProject = useCallback(async (data: CreateProjectDto) => {
+  const createGroup = useCallback(async (data: CreateGroupDto) => {
     try {
-      const project = await projectService.createProject(data);
-      addProject(project);
-      return project;
+      const group = await projectService.createGroup(data);
+      addGroupToStore(group);
+      return group;
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error creating group:', error);
       throw error;
     }
-  }, [addProject]);
+  }, [addGroupToStore]);
 
-  const updateProject = useCallback(async (id: string, data: UpdateProjectDto) => {
+  const updateGroup = useCallback(async (id: string, data: UpdateGroupDto) => {
     try {
-      const project = await projectService.updateProject(id, data);
-      updateProjectInStore(project);
-      return project;
+      const group = await projectService.updateGroup(id, data);
+      updateGroupInStore(group);
+      return group;
     } catch (error) {
-      console.error('Error updating project:', error);
+      console.error('Error updating group:', error);
       throw error;
     }
-  }, [updateProjectInStore]);
+  }, [updateGroupInStore]);
 
-  const deleteProject = useCallback(async (id: string) => {
+  const deleteGroup = useCallback(async (id: string) => {
     try {
-      await projectService.deleteProject(id);
-      removeProjectFromStore(id);
+      await projectService.deleteGroup(id);
+      removeGroupFromStore(id);
     } catch (error) {
-      console.error('Error deleting project:', error);
+      console.error('Error deleting group:', error);
       throw error;
     }
-  }, [removeProjectFromStore]);
+  }, [removeGroupFromStore]);
+
+  const createSubProject = useCallback(async (groupId: string, data: CreateSubProjectDto) => {
+    try {
+      const sub = await projectService.createSubProject(groupId, data);
+      addSubProjectToStore(groupId, sub);
+      return sub;
+    } catch (error) {
+      console.error('Error creating sub-project:', error);
+      throw error;
+    }
+  }, [addSubProjectToStore]);
+
+  const updateSubProject = useCallback(async (groupId: string, subId: string, data: UpdateSubProjectDto) => {
+    try {
+      const sub = await projectService.updateSubProject(groupId, subId, data);
+      updateSubProjectInStore(groupId, sub);
+      return sub;
+    } catch (error) {
+      console.error('Error updating sub-project:', error);
+      throw error;
+    }
+  }, [updateSubProjectInStore]);
+
+  const deleteSubProject = useCallback(async (groupId: string, subId: string) => {
+    try {
+      await projectService.deleteSubProject(groupId, subId);
+      removeSubProjectFromStore(groupId, subId);
+    } catch (error) {
+      console.error('Error deleting sub-project:', error);
+      throw error;
+    }
+  }, [removeSubProjectFromStore]);
 
   return {
-    projects,
-    loadProjects,
-    createProject,
-    updateProject,
-    deleteProject,
+    groups,
+    loadGroups,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    createSubProject,
+    updateSubProject,
+    deleteSubProject,
   };
 }

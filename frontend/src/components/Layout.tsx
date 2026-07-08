@@ -9,80 +9,139 @@ import { useAppStore } from '../store/useAppStore';
 import { useProjects } from '../hooks/useProjects';
 import { useFileContent } from '../hooks/useFileContent';
 import { loadOpenFoldersFromStorage } from '../store/useProjectStore';
-import type { Project } from '../types';
+import type { ProjectGroup, SubProject } from '../types';
 
 export function Layout() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { projectSlug, '*': filePath } = useParams();
+  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
+  const [isSubDropdownOpen, setIsSubDropdownOpen] = useState(false);
+  const { groupSlug, subSlug, '*': filePath } = useParams();
   const navigate = useNavigate();
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadCallbackRef = useRef<((content: string) => void) | null>(null);
 
-  const { projects, loadProjects } = useProjects();
+  const { groups, loadGroups } = useProjects();
   const { loadFile } = useFileContent();
 
-  const currentProject = useProjectStore((state) => state.currentProject);
-  const setCurrentProject = useProjectStore((state) => state.setCurrentProject);
+  const currentGroup = useProjectStore((state) => state.currentGroup);
+  const currentSubProject = useProjectStore((state) => state.currentSubProject);
+  const setCurrentGroup = useProjectStore((state) => state.setCurrentGroup);
+  const setCurrentSubProject = useProjectStore((state) => state.setCurrentSubProject);
   const setOpenFolders = useProjectStore((state) => state.setOpenFolders);
 
   const darkMode = useAppStore((state) => state.darkMode);
   const setDarkMode = useAppStore((state) => state.setDarkMode);
 
-  // Load projects on mount
+  // Load groups on mount
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    loadGroups();
+  }, [loadGroups]);
 
-  // Handle project selection from URL or localStorage
+  // Handle group/sub-project selection from URL or localStorage
   useEffect(() => {
-    if (projects.length === 0) return;
+    if (groups.length === 0) return;
 
-    if (projectSlug) {
-      const project = projects.find((p) => p.slug === projectSlug || p.id === projectSlug);
-      if (project && project.id !== currentProject?.id) {
-        selectProject(project, false);
+    if (groupSlug) {
+      // Try to find group by slug
+      const group = groups.find((g) => g.slug === groupSlug);
+
+      if (group) {
+        if (group.id !== currentGroup?.id) {
+          setCurrentGroup(group);
+        }
+
+        if (subSlug) {
+          const sub = group.subprojects.find((sp) => sp.slug === subSlug);
+          if (sub && sub.id !== currentSubProject?.id) {
+            selectSubProject(sub, false);
+          }
+        } else if (group.id !== currentGroup?.id) {
+          // Group selected but no sub-project in URL - restore from localStorage or pick first
+          const savedSubId = localStorage.getItem('currentSubProjectId');
+          const savedSub = savedSubId ? group.subprojects.find((sp) => sp.id === savedSubId) : null;
+          const sub = savedSub || group.subprojects[0];
+          if (sub) {
+            selectSubProject(sub);
+          }
+        }
+      } else {
+        // Fallback: groupSlug might be an old project slug - search all sub-projects
+        for (const g of groups) {
+          const sub = g.subprojects.find((sp) => sp.slug === groupSlug);
+          if (sub) {
+            setCurrentGroup(g);
+            selectSubProject(sub, false);
+            // Redirect to new URL format
+            navigate(`/${g.slug}/${sub.slug}${filePath ? `/${filePath}` : ''}`, { replace: true });
+            return;
+          }
+        }
       }
-    } else {
-      const savedProjectId = localStorage.getItem('currentProjectId');
-      if (savedProjectId && !currentProject) {
-        const project = projects.find((p) => p.id === savedProjectId);
-        if (project) {
-          selectProject(project);
+    } else if (!currentGroup) {
+      // No URL slug - restore from localStorage
+      const savedGroupId = localStorage.getItem('currentGroupId');
+      const savedSubId = localStorage.getItem('currentSubProjectId');
+
+      if (savedGroupId) {
+        const group = groups.find((g) => g.id === savedGroupId);
+        if (group) {
+          setCurrentGroup(group);
+          const sub = savedSubId
+            ? group.subprojects.find((sp) => sp.id === savedSubId) || group.subprojects[0]
+            : group.subprojects[0];
+          if (sub) {
+            selectSubProject(sub);
+          }
         }
       }
     }
-  }, [projects, projectSlug]);
+  }, [groups, groupSlug, subSlug]);
 
   // Handle file selection from URL or localStorage
   useEffect(() => {
-    if (!currentProject) return;
+    if (!currentSubProject) return;
 
     if (filePath) {
-      // Construct full path from URL
-      const fullPath = `${currentProject.path}/${filePath}`;
+      const fullPath = `${currentSubProject.path}/${filePath}`;
       const fileName = filePath.split('/').pop() || '';
-      // Load file without updating URL (we're already at the URL)
       loadFileWithoutUrlUpdate(fullPath, fileName);
     } else {
-      // Restore previously selected file from localStorage
       const savedFile = localStorage.getItem('currentFile');
-      if (savedFile && savedFile.startsWith(currentProject.path)) {
+      if (savedFile && savedFile.startsWith(currentSubProject.path)) {
         const fileName = savedFile.split('/').pop() || '';
         loadFileWithoutUrlUpdate(savedFile, fileName);
       }
     }
-  }, [currentProject, filePath, loadFile]);
+  }, [currentSubProject, filePath, loadFile]);
 
-  const selectProject = async (project: Project, updateUrl = true) => {
-    setCurrentProject(project);
-    setIsDropdownOpen(false);
+  const selectGroup = (group: ProjectGroup) => {
+    setCurrentGroup(group);
+    setIsGroupDropdownOpen(false);
+
+    // Auto-select sub-project: restore last selected or pick first
+    const savedSubId = localStorage.getItem('currentSubProjectId');
+    const savedSub = savedSubId ? group.subprojects.find((sp) => sp.id === savedSubId) : null;
+    const sub = savedSub || group.subprojects[0];
+
+    if (sub) {
+      selectSubProject(sub, true, group);
+    } else {
+      navigate(`/${group.slug}`);
+    }
+  };
+
+  const selectSubProject = (sub: SubProject, updateUrl = true, group?: ProjectGroup) => {
+    setCurrentSubProject(sub);
+    setIsSubDropdownOpen(false);
 
     // Load open folders from localStorage
-    const openFolders = loadOpenFoldersFromStorage(project.id);
-    setOpenFolders(project.id, openFolders);
+    const openFolders = loadOpenFoldersFromStorage(sub.id);
+    setOpenFolders(sub.id, openFolders);
 
     if (updateUrl) {
-      navigate(`/${project.slug}`);
+      const g = group || currentGroup;
+      if (g) {
+        navigate(`/${g.slug}/${sub.slug}`);
+      }
     }
   };
 
@@ -98,11 +157,9 @@ export function Layout() {
     try {
       await loadFile(path, name);
 
-      // Update URL to reflect the selected file
-      if (currentProject) {
-        // Remove project path prefix to get relative path
-        const relativePath = path.replace(`${currentProject.path}/`, '');
-        navigate(`/${currentProject.slug}/${relativePath}`);
+      if (currentGroup && currentSubProject) {
+        const relativePath = path.replace(`${currentSubProject.path}/`, '');
+        navigate(`/${currentGroup.slug}/${currentSubProject.slug}/${relativePath}`);
       }
     } catch (error) {
       console.error('Error loading file:', error);
@@ -123,13 +180,17 @@ export function Layout() {
     <div className="h-screen flex flex-col">
       {/* Top Navigation */}
       <Navigation
-        projects={projects}
-        currentProject={currentProject}
-        onProjectSelect={selectProject}
+        groups={groups}
+        currentGroup={currentGroup}
+        currentSubProject={currentSubProject}
+        onGroupSelect={selectGroup}
+        onSubProjectSelect={(sub) => selectSubProject(sub)}
         darkMode={darkMode}
         onThemeToggle={() => setDarkMode(!darkMode)}
-        isDropdownOpen={isDropdownOpen}
-        onDropdownToggle={setIsDropdownOpen}
+        isGroupDropdownOpen={isGroupDropdownOpen}
+        onGroupDropdownToggle={setIsGroupDropdownOpen}
+        isSubDropdownOpen={isSubDropdownOpen}
+        onSubDropdownToggle={setIsSubDropdownOpen}
       />
 
       {/* Main Content Area */}

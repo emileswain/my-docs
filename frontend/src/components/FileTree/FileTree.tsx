@@ -35,7 +35,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   }, [currentProject, loadFileTree]);
 
   // Listen for file system changes with debounce
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onFileSystemEvent = useCallback(() => {
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {

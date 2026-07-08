@@ -1,48 +1,22 @@
 import { create } from 'zustand';
-import type { Project, FileContent } from '../types';
+import type { ProjectGroup, SubProject, FileContent } from '../types';
 
-/**
- * useProjectStore - Global state store for project and file data
- *
- * Purpose:
- * - Manages all project-related data (projects list, current project)
- * - Manages current file state and content
- * - Manages folder expand/collapse state per project
- * - Persists selections to localStorage
- *
- * Used by:
- * - useProjects hook (project CRUD operations)
- * - useFileTree hook (folder open/close state)
- * - useFileContent hook (current file data)
- * - Layout component (project selection, file selection)
- * - FileTree component (current project, open folders)
- * - FileViewer component (current file content)
- * - StructureTree component (current file content)
- * - FileTreeItem component (current file for selection highlighting)
- *
- * State:
- * - projects: Array of all available projects
- * - currentProject: Currently selected project
- * - currentFile: Path of currently open file
- * - currentFileName: Name of currently open file
- * - currentFileContent: Full content object for current file
- * - openFolders: Per-project mapping of expanded folder paths
- *
- * Special considerations:
- * - Project and file selections are persisted to localStorage
- * - Open folders are persisted per-project
- * - Removing a project clears it from currentProject if selected
- * - Updating a project updates currentProject if it's the selected one
- */
 interface ProjectState {
-  // Projects
-  projects: Project[];
-  currentProject: Project | null;
-  setProjects: (projects: Project[]) => void;
-  setCurrentProject: (project: Project | null) => void;
-  addProject: (project: Project) => void;
-  updateProject: (project: Project) => void;
-  removeProject: (id: string) => void;
+  // Groups
+  groups: ProjectGroup[];
+  currentGroup: ProjectGroup | null;
+  currentSubProject: SubProject | null;
+  setGroups: (groups: ProjectGroup[]) => void;
+  setCurrentGroup: (group: ProjectGroup | null) => void;
+  setCurrentSubProject: (sub: SubProject | null) => void;
+
+  // Group CRUD helpers
+  addGroup: (group: ProjectGroup) => void;
+  updateGroup: (group: ProjectGroup) => void;
+  removeGroup: (id: string) => void;
+  addSubProject: (groupId: string, sub: SubProject) => void;
+  updateSubProject: (groupId: string, sub: SubProject) => void;
+  removeSubProject: (groupId: string, subId: string) => void;
 
   // Current file
   currentFile: string | null;
@@ -50,33 +24,87 @@ interface ProjectState {
   currentFileContent: FileContent | null;
   setCurrentFile: (path: string | null, name: string | null, content: FileContent | null) => void;
 
-  // Open folders (per project)
+  /** @deprecated Use currentSubProject - compatibility alias for components that haven't been updated */
+  currentProject: SubProject | null;
+
+  // Open folders (per sub-project)
   openFolders: Record<string, string[]>;
-  setOpenFolders: (projectId: string, folders: string[]) => void;
-  toggleFolder: (projectId: string, folderPath: string) => void;
+  setOpenFolders: (subProjectId: string, folders: string[]) => void;
+  toggleFolder: (subProjectId: string, folderPath: string) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
-  // Projects
-  projects: [],
+  // Groups
+  groups: [],
+  currentGroup: null,
+  currentSubProject: null,
+
   currentProject: null,
-  setProjects: (projects) => set({ projects }),
-  setCurrentProject: (project) => {
-    set({ currentProject: project });
-    if (project) {
-      localStorage.setItem('currentProjectId', project.id);
+
+  setGroups: (groups) => set({ groups }),
+
+  setCurrentGroup: (group) => {
+    set({ currentGroup: group });
+    if (group) {
+      localStorage.setItem('currentGroupId', group.id);
     }
   },
-  addProject: (project) => set((state) => ({
-    projects: [...state.projects, project]
+
+  setCurrentSubProject: (sub) => {
+    set({ currentSubProject: sub, currentProject: sub });
+    if (sub) {
+      localStorage.setItem('currentSubProjectId', sub.id);
+    }
+  },
+
+  addGroup: (group) => set((state) => ({
+    groups: [...state.groups, group],
   })),
-  updateProject: (project) => set((state) => ({
-    projects: state.projects.map(p => p.id === project.id ? project : p),
-    currentProject: state.currentProject?.id === project.id ? project : state.currentProject
+
+  updateGroup: (group) => set((state) => ({
+    groups: state.groups.map(g => g.id === group.id ? group : g),
+    currentGroup: state.currentGroup?.id === group.id ? group : state.currentGroup,
   })),
-  removeProject: (id) => set((state) => ({
-    projects: state.projects.filter(p => p.id !== id),
-    currentProject: state.currentProject?.id === id ? null : state.currentProject
+
+  removeGroup: (id) => set((state) => ({
+    groups: state.groups.filter(g => g.id !== id),
+    currentGroup: state.currentGroup?.id === id ? null : state.currentGroup,
+    currentSubProject: state.currentGroup?.id === id ? null : state.currentSubProject,
+  })),
+
+  addSubProject: (groupId, sub) => set((state) => ({
+    groups: state.groups.map(g =>
+      g.id === groupId
+        ? { ...g, subprojects: [...g.subprojects, sub] }
+        : g
+    ),
+    currentGroup: state.currentGroup?.id === groupId
+      ? { ...state.currentGroup, subprojects: [...state.currentGroup.subprojects, sub] }
+      : state.currentGroup,
+  })),
+
+  updateSubProject: (groupId, sub) => set((state) => ({
+    groups: state.groups.map(g =>
+      g.id === groupId
+        ? { ...g, subprojects: g.subprojects.map(sp => sp.id === sub.id ? sub : sp) }
+        : g
+    ),
+    currentGroup: state.currentGroup?.id === groupId
+      ? { ...state.currentGroup, subprojects: state.currentGroup.subprojects.map(sp => sp.id === sub.id ? sub : sp) }
+      : state.currentGroup,
+    currentSubProject: state.currentSubProject?.id === sub.id ? sub : state.currentSubProject,
+  })),
+
+  removeSubProject: (groupId, subId) => set((state) => ({
+    groups: state.groups.map(g =>
+      g.id === groupId
+        ? { ...g, subprojects: g.subprojects.filter(sp => sp.id !== subId) }
+        : g
+    ),
+    currentGroup: state.currentGroup?.id === groupId
+      ? { ...state.currentGroup, subprojects: state.currentGroup.subprojects.filter(sp => sp.id !== subId) }
+      : state.currentGroup,
+    currentSubProject: state.currentSubProject?.id === subId ? null : state.currentSubProject,
   })),
 
   // Current file
@@ -96,27 +124,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   // Open folders
   openFolders: {},
-  setOpenFolders: (projectId, folders) => {
+  setOpenFolders: (subProjectId, folders) => {
     set((state) => ({
-      openFolders: { ...state.openFolders, [projectId]: folders }
+      openFolders: { ...state.openFolders, [subProjectId]: folders }
     }));
-    localStorage.setItem(`openFolders_${projectId}`, JSON.stringify(folders));
+    localStorage.setItem(`openFolders_${subProjectId}`, JSON.stringify(folders));
   },
-  toggleFolder: (projectId, folderPath) => {
+  toggleFolder: (subProjectId, folderPath) => {
     const state = get();
-    const projectFolders = state.openFolders[projectId] || [];
+    const projectFolders = state.openFolders[subProjectId] || [];
     const isOpen = projectFolders.includes(folderPath);
 
     const newFolders = isOpen
       ? projectFolders.filter((f) => f !== folderPath)
       : [...projectFolders, folderPath];
 
-    state.setOpenFolders(projectId, newFolders);
+    state.setOpenFolders(subProjectId, newFolders);
   },
 }));
 
-// Helper to load open folders from localStorage
-export function loadOpenFoldersFromStorage(projectId: string): string[] {
-  const saved = localStorage.getItem(`openFolders_${projectId}`);
+export function loadOpenFoldersFromStorage(subProjectId: string): string[] {
+  const saved = localStorage.getItem(`openFolders_${subProjectId}`);
   return saved ? JSON.parse(saved) : [];
 }

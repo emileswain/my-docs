@@ -8,7 +8,6 @@ function App() {
   const darkMode = useAppStore((state) => state.darkMode);
 
   useEffect(() => {
-    // Apply theme to document root
     if (darkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
     } else {
@@ -21,7 +20,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/:projectSlug/*" element={<Layout />} />
+        <Route path="/:groupSlug" element={<Layout />} />
+        <Route path="/:groupSlug/:subSlug/*" element={<Layout />} />
       </Routes>
     </BrowserRouter>
   );

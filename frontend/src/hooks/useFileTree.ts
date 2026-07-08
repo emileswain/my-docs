@@ -34,7 +34,7 @@ import { fileService } from '../services/fileService';
 export function useFileTree(projectId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const projects = useProjectStore((state) => state.projects);
+  const currentSubProject = useProjectStore((state) => state.currentSubProject);
   const openFolders = useProjectStore((state) => state.openFolders);
   const setOpenFolders = useProjectStore((state) => state.setOpenFolders);
   const toggleFolder = useProjectStore((state) => state.toggleFolder);
@@ -45,13 +45,12 @@ export function useFileTree(projectId: string | null) {
   const loadFileTree = useCallback(async () => {
     if (!projectId) return;
 
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
+    if (!currentSubProject || currentSubProject.id !== projectId) return;
 
     setIsLoading(true);
     try {
       const { cache, rootItems } = await fileService.browseAllFolders(
-        project.id
+        currentSubProject.id
       );
 
       setFileTreeCache(projectId, {
@@ -65,7 +64,7 @@ export function useFileTree(projectId: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, projects, setFileTreeCache]);
+  }, [projectId, currentSubProject, setFileTreeCache]);
 
   const getTreeData = useCallback(() => {
     if (!projectId) return null;
