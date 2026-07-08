@@ -4,6 +4,7 @@ import { Navigation } from './common/Navigation';
 import { FileTree } from './FileTree';
 import { FileViewer } from './FileViewer';
 import { StructureTree } from './StructureTree';
+import { NotePanel } from './NotePanel';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
 import { useProjects } from '../hooks/useProjects';
@@ -30,6 +31,8 @@ export function Layout() {
 
   const darkMode = useAppStore((state) => state.darkMode);
   const setDarkMode = useAppStore((state) => state.setDarkMode);
+  const notesPanelVisible = useAppStore((state) => state.notesPanelVisible);
+  const notesPanelPosition = useAppStore((state) => state.notesPanelPosition);
 
   // Load groups on mount
   useEffect(() => {
@@ -41,7 +44,6 @@ export function Layout() {
     if (groups.length === 0) return;
 
     if (groupSlug) {
-      // Try to find group by slug
       const group = groups.find((g) => g.slug === groupSlug);
 
       if (group) {
@@ -55,7 +57,6 @@ export function Layout() {
             selectSubProject(sub, false);
           }
         } else if (group.id !== currentGroup?.id) {
-          // Group selected but no sub-project in URL - restore from localStorage or pick first
           const savedSubId = localStorage.getItem('currentSubProjectId');
           const savedSub = savedSubId ? group.subprojects.find((sp) => sp.id === savedSubId) : null;
           const sub = savedSub || group.subprojects[0];
@@ -64,20 +65,17 @@ export function Layout() {
           }
         }
       } else {
-        // Fallback: groupSlug might be an old project slug - search all sub-projects
         for (const g of groups) {
           const sub = g.subprojects.find((sp) => sp.slug === groupSlug);
           if (sub) {
             setCurrentGroup(g);
             selectSubProject(sub, false);
-            // Redirect to new URL format
             navigate(`/${g.slug}/${sub.slug}${filePath ? `/${filePath}` : ''}`, { replace: true });
             return;
           }
         }
       }
     } else if (!currentGroup) {
-      // No URL slug - restore from localStorage
       const savedGroupId = localStorage.getItem('currentGroupId');
       const savedSubId = localStorage.getItem('currentSubProjectId');
 
@@ -117,7 +115,6 @@ export function Layout() {
     setCurrentGroup(group);
     setIsGroupDropdownOpen(false);
 
-    // Auto-select sub-project: restore last selected or pick first
     const savedSubId = localStorage.getItem('currentSubProjectId');
     const savedSub = savedSubId ? group.subprojects.find((sp) => sp.id === savedSubId) : null;
     const sub = savedSub || group.subprojects[0];
@@ -133,7 +130,6 @@ export function Layout() {
     setCurrentSubProject(sub);
     setIsSubDropdownOpen(false);
 
-    // Load open folders from localStorage
     const openFolders = loadOpenFoldersFromStorage(sub.id);
     setOpenFolders(sub.id, openFolders);
 
@@ -153,7 +149,7 @@ export function Layout() {
     }
   };
 
-  const handleFileSelect = async (path: string, name: string) => {
+  const handleFileSelect = useCallback(async (path: string, name: string) => {
     try {
       await loadFile(path, name);
 
@@ -164,7 +160,7 @@ export function Layout() {
     } catch (error) {
       console.error('Error loading file:', error);
     }
-  };
+  }, [loadFile, currentGroup, currentSubProject, navigate]);
 
   const handleHistoryLoad = useCallback((callback: (content: string) => void) => {
     historyLoadCallbackRef.current = callback;
@@ -175,6 +171,12 @@ export function Layout() {
       historyLoadCallbackRef.current(content);
     }
   }, []);
+
+  const notePanelElement = notesPanelVisible && (
+    <NotePanel
+      contentAreaRef={contentAreaRef}
+    />
+  );
 
   return (
     <div className="h-screen flex flex-col">
@@ -196,15 +198,27 @@ export function Layout() {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         <FileTree onFileSelect={handleFileSelect} />
-        <FileViewer
-          contentAreaRef={contentAreaRef}
-          onHistoryLoad={handleHistoryLoad}
-          onNavigate={handleFileSelect}
-        />
-        <StructureTree
-          contentAreaRef={contentAreaRef}
-          onLoadHistory={handleLoadHistory}
-        />
+
+        {/* Center column — splits vertically when notes are at bottom */}
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <FileViewer
+            contentAreaRef={contentAreaRef}
+            onHistoryLoad={handleHistoryLoad}
+            onNavigate={handleFileSelect}
+
+          />
+          {notesPanelVisible && notesPanelPosition === 'bottom' && notePanelElement}
+        </div>
+
+        {/* Right side: structure tree or notes panel */}
+        {notesPanelVisible && notesPanelPosition === 'right' ? (
+          notePanelElement
+        ) : (
+          <StructureTree
+            contentAreaRef={contentAreaRef}
+            onLoadHistory={handleLoadHistory}
+          />
+        )}
       </div>
     </div>
   );

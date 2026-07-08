@@ -580,6 +580,45 @@ def refresh_watch_script(project_id, watch_id):
         return jsonify({'error': str(e)}), 500
 
 
+# --- Notes endpoints ---
+
+@app.route('/api/notes/<path:file_path>', methods=['GET'])
+def get_notes(file_path):
+    """Get notes for a file."""
+    file_path = '/' + file_path
+    notes_dir = app.config['config_dir'] / 'notes'
+
+    import hashlib
+    key = hashlib.sha256(file_path.encode()).hexdigest()[:16]
+    notes_file = notes_dir / f'{key}.json'
+
+    if notes_file.exists():
+        with open(notes_file, 'r') as f:
+            return jsonify(json.load(f))
+
+    return jsonify({'notes': []})
+
+
+@app.route('/api/notes/<path:file_path>', methods=['PUT'])
+def save_notes(file_path):
+    """Save notes for a file."""
+    file_path = '/' + file_path
+    notes_dir = app.config['config_dir'] / 'notes'
+    notes_dir.mkdir(parents=True, exist_ok=True)
+
+    import hashlib
+    key = hashlib.sha256(file_path.encode()).hexdigest()[:16]
+    notes_file = notes_dir / f'{key}.json'
+
+    data = request.json
+    data['file_path'] = file_path
+
+    with open(notes_file, 'w') as f:
+        json.dump(data, f, indent=2)
+
+    return jsonify({'success': True})
+
+
 def restart_all_watchers():
     """Restart all file watchers with current settings."""
     pm = app.config['project_manager']

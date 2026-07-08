@@ -9,6 +9,8 @@ interface FileViewerHeaderProps {
   onSave?: () => void;
   canEdit?: boolean;
   isJunit?: boolean;
+  notesVisible?: boolean;
+  onToggleNotes?: () => void;
 }
 
 export function FileViewerHeader({
@@ -21,7 +23,9 @@ export function FileViewerHeader({
   isSaving,
   onSave,
   canEdit = false,
-  isJunit = false
+  isJunit = false,
+  notesVisible = false,
+  onToggleNotes,
 }: FileViewerHeaderProps) {
   return (
     <div
@@ -71,6 +75,21 @@ export function FileViewerHeader({
             >
               <i className={`fas fa-${isSaving ? 'spinner fa-spin' : 'save'} mr-1`}></i>
               {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          )}
+          {onToggleNotes && (
+            <button
+              onClick={onToggleNotes}
+              className="px-3 py-1 text-sm rounded"
+              style={{
+                backgroundColor: notesVisible ? 'var(--accent-primary)' : 'var(--accent-secondary)',
+                color: notesVisible ? 'white' : 'var(--text-primary)',
+                transition: 'background-color 0.15s',
+              }}
+              title={notesVisible ? 'Hide notes' : 'Show notes'}
+            >
+              <i className="fas fa-sticky-note mr-1"></i>
+              Notes
             </button>
           )}
           {canToggleRaw && (

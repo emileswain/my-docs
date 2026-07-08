@@ -36,17 +36,17 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
   const setShowRaw = useAppStore((state) => state.setShowRaw);
   const currentHeading = useAppStore((state) => state.currentHeading);
   const setCurrentHeading = useAppStore((state) => state.setCurrentHeading);
+  const notesPanelVisible = useAppStore((state) => state.notesPanelVisible);
+  const setNotesPanelVisible = useAppStore((state) => state.setNotesPanelVisible);
 
   const darkMode = useAppStore((state) => state.darkMode);
 
-  // Expose history loading callback to parent
   useScrollPosition(currentFile, contentAreaRef);
 
   const handleLoadHistory = (content: string) => {
     editorRef.current?.loadHistoricalContent(content);
   };
 
-  // Register callback with parent via effect
   useEffect(() => {
     if (onHistoryLoad) {
       onHistoryLoad(handleLoadHistory);
@@ -61,14 +61,12 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
   const isXml = extension === '.xml';
   const isJunit = isXml && !!currentFileContent?.junit;
   const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid || isXml;
-  const canEdit = isMarkdown || isJson || isYaml; // Can edit markdown, json, yaml
+  const canEdit = isMarkdown || isJson || isYaml;
 
-  // Warn user about unsaved changes when navigating away
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty && showRaw && canEdit) {
         e.preventDefault();
-        // Modern browsers require returnValue to be set
         e.returnValue = '';
         return '';
       }
@@ -88,18 +86,11 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
     setIsSaving(true);
     try {
       await fileService.saveFile(currentFile, content);
-
-      // Save to history
       addToFileHistory(currentProject.id, currentFile, content);
-
-      // Exit edit mode after successful save
       setShowRaw(false);
-
-      // TODO: Show success notification
       console.log('File saved successfully');
     } catch (error) {
       console.error('Failed to save file:', error);
-      // TODO: Show error notification
       throw error;
     } finally {
       setIsSaving(false);
@@ -107,7 +98,6 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
   };
 
   const handleSaveClick = () => {
-    // Trigger save on the editor via ref
     editorRef.current?.triggerSave();
   };
 
@@ -115,11 +105,9 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
     if (!currentFileContent) return null;
 
     if (showRaw) {
-      // For JUnit XML, show syntax-highlighted XML source
       if (isJunit) {
         return <XmlViewer content={currentFileContent.content} />;
       }
-      // Use editable viewer for markdown, json, yaml
       if (canEdit && currentFile) {
         return (
           <EditableRawViewer
@@ -177,7 +165,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
 
   return (
     <div
-      className="flex-1 flex flex-col min-w-0"
+      className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
       style={{ backgroundColor: 'var(--bg-secondary)' }}
     >
       <FileViewerHeader
@@ -191,6 +179,8 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
         onSave={handleSaveClick}
         canEdit={canEdit}
         isJunit={isJunit}
+        notesVisible={notesPanelVisible}
+        onToggleNotes={() => setNotesPanelVisible(!notesPanelVisible)}
       />
 
       <div
@@ -212,7 +202,6 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
         )}
       </div>
 
-      {/* Fullscreen Mermaid Modal */}
       {fullscreenMermaid && (
         <MermaidModal
           content={fullscreenMermaid}

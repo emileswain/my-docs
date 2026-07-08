@@ -48,6 +48,12 @@ interface AppState {
   // Current heading (for markdown files)
   currentHeading: string;
   setCurrentHeading: (heading: string) => void;
+
+  // Notes panel
+  notesPanelVisible: boolean;
+  notesPanelPosition: 'bottom' | 'right';
+  setNotesPanelVisible: (visible: boolean) => void;
+  setNotesPanelPosition: (position: 'bottom' | 'right') => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -82,4 +88,16 @@ export const useAppStore = create<AppState>((set) => ({
   // Current heading
   currentHeading: '',
   setCurrentHeading: (heading) => set({ currentHeading: heading }),
+
+  // Notes panel
+  notesPanelVisible: localStorage.getItem('notesPanelVisible') === 'true',
+  notesPanelPosition: (localStorage.getItem('notesPanelPosition') as 'bottom' | 'right') || 'bottom',
+  setNotesPanelVisible: (visible) => {
+    set({ notesPanelVisible: visible });
+    localStorage.setItem('notesPanelVisible', String(visible));
+  },
+  setNotesPanelPosition: (position) => {
+    set({ notesPanelPosition: position });
+    localStorage.setItem('notesPanelPosition', position);
+  },
 }));
