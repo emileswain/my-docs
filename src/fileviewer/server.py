@@ -525,16 +525,53 @@ def refresh_watch_script(project_id, watch_id):
         if not output:
             return jsonify({'error': 'Script returned empty output'}), 400
 
-        # Update the watch pattern with the script output
+        # Parse script output — supports sectioned JSON schema or plain text
+        #
+        # Sectioned JSON schema (v1):
+        # {
+        #   "watch": {                    -- watch fields to apply
+        #     "pattern": "277*",          -- file glob pattern
+        #     "name": "Feature #277",     -- display name
+        #     "subfolder": "docs/features" -- subfolder override
+        #   },
+        #   "project": { ... },           -- reserved for future use
+        #   "settings": { ... }           -- reserved for future use
+        # }
+        #
+        # Plain text fallback: treated as pattern value
+        updates = {}
+
+        try:
+            parsed = json.loads(output)
+
+            if isinstance(parsed, dict):
+                # Check for error from script
+                if 'error' in parsed:
+                    return jsonify({'error': f'Script error: {parsed["error"]}'}), 400
+
+                # Extract watch section
+                watch_section = parsed.get('watch', parsed)
+
+                # Apply known watch fields
+                allowed_fields = {'pattern', 'name', 'subfolder'}
+                updates = {k: v for k, v in watch_section.items() if k in allowed_fields and v}
+        except (json.JSONDecodeError, ValueError):
+            # Plain text fallback — treat entire output as pattern
+            updates = {'pattern': output}
+
+        if not updates:
+            return jsonify({'error': 'Script returned no applicable values'}), 400
+
+        # Apply updates to the watch
         if watch_source == 'project':
-            watch['pattern'] = output
+            watch.update(updates)
             pm.save()
         else:
-            sm.update_watch(watch_id, {'pattern': output})
+            sm.update_watch(watch_id, updates)
 
         return jsonify({
             'success': True,
-            'pattern': output,
+            'updates': updates,
             'watch': watch,
         })
     except subprocess.TimeoutExpired:
