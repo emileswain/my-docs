@@ -66,10 +66,12 @@ export interface FileContent {
 export interface JUnitTestCase {
   name: string;
   classname?: string;
+  app_path?: string;
   time?: number;
   status: 'passed' | 'failed' | 'errored' | 'skipped';
   failure_message?: string;
   failure_text?: string;
+  system_out?: string;
   file?: string;
 }
 

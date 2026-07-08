@@ -334,6 +334,18 @@ class FileParser:
                 if file_attr:
                     tc['file'] = file_attr
 
+                # Extract app_path for grouping (common in Unity/ESP-IDF test results)
+                app_path = tc_el.get('app_path')
+                if app_path:
+                    tc['app_path'] = app_path
+
+                # Extract system-out message if present
+                sysout_el = tc_el.find('system-out')
+                if sysout_el is not None:
+                    msg = sysout_el.get('message') or sysout_el.text or ''
+                    if msg:
+                        tc['system_out'] = msg
+
                 testcases.append(tc)
 
             testsuites.append({

@@ -41,22 +41,23 @@ function formatDuration(seconds: number): string {
 function TestCaseRow({ tc }: { tc: JUnitTestCase }) {
   const [expanded, setExpanded] = useState(false);
   const hasDetails = tc.status === 'failed' || tc.status === 'errored';
+  const isExpandable = hasDetails || !!tc.system_out;
 
   return (
     <div style={{ borderBottom: '1px solid var(--border-primary)' }}>
       <div
         className="flex items-center gap-3 px-4 py-2.5"
-        style={{ cursor: hasDetails ? 'pointer' : 'default' }}
-        onClick={() => hasDetails && setExpanded(!expanded)}
+        style={{ cursor: isExpandable ? 'pointer' : 'default' }}
+        onClick={() => isExpandable && setExpanded(!expanded)}
       >
         <StatusIcon status={tc.status} />
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {tc.name}
           </span>
-          {tc.classname && (
-            <span className="text-xs ml-2" style={{ color: 'var(--text-tertiary)' }}>
-              {tc.classname}
+          {tc.system_out && !expanded && (
+            <span className="text-xs ml-2 italic" style={{ color: 'var(--text-tertiary)' }}>
+              {tc.system_out.length > 60 ? tc.system_out.slice(0, 60) + '...' : tc.system_out}
             </span>
           )}
         </div>
@@ -66,7 +67,7 @@ function TestCaseRow({ tc }: { tc: JUnitTestCase }) {
               {formatDuration(tc.time)}
             </span>
           )}
-          {hasDetails && (
+          {isExpandable && (
             <i
               className={`fas fa-chevron-${expanded ? 'up' : 'down'} text-xs`}
               style={{ color: 'var(--text-tertiary)' }}
@@ -74,7 +75,7 @@ function TestCaseRow({ tc }: { tc: JUnitTestCase }) {
           )}
         </div>
       </div>
-      {expanded && hasDetails && (
+      {expanded && isExpandable && (
         <div className="px-4 pb-3" style={{ paddingLeft: '2.75rem' }}>
           {tc.failure_message && (
             <p className="text-sm mb-2 font-medium" style={{ color: '#ef4444' }}>
@@ -93,6 +94,12 @@ function TestCaseRow({ tc }: { tc: JUnitTestCase }) {
             >
               {tc.failure_text}
             </pre>
+          )}
+          {tc.system_out && (
+            <p className="text-xs mt-1 italic" style={{ color: 'var(--text-tertiary)' }}>
+              <i className="fas fa-comment-alt mr-1" style={{ fontSize: '10px' }} />
+              {tc.system_out}
+            </p>
           )}
         </div>
       )}
@@ -126,18 +133,23 @@ function groupTests(tests: JUnitTestCase[], mode: GroupMode): TestGroup[] {
     if (mode === 'status') {
       key = tc.status;
     } else {
-      // classname grouping — extract the class/module name
-      // pytest: "tests.test_auth.TestLogin" → "TestLogin"
-      // java:   "com.example.AuthTest" → "AuthTest"
-      // plain:  "TestLogin" → "TestLogin"
+      // classname grouping — try classname first, then app_path, then test name prefix
       const cn = tc.classname || '';
-      if (!cn) {
-        key = 'Ungrouped';
-      } else {
+      const ap = tc.app_path || '';
+
+      if (cn) {
+        // pytest: "tests.test_auth.TestLogin" → "TestLogin"
+        // java:   "com.example.AuthTest" → "AuthTest"
         const parts = cn.split('.');
-        // Use the last component that looks like a class (starts with uppercase or has "test" in it)
-        // Fall back to last component
         key = parts[parts.length - 1] || cn;
+      } else if (ap) {
+        // Unity/ESP-IDF: "/path/to/hw_tests/test_audio" → "test_audio"
+        const parts = ap.replace(/\/+$/, '').split('/');
+        key = parts[parts.length - 1] || ap;
+      } else {
+        // Fall back to test name prefix: "T-AU-01: ..." → "T-AU"
+        const prefixMatch = tc.name.match(/^([A-Z]+-[A-Z]+)/);
+        key = prefixMatch ? prefixMatch[1] : 'Ungrouped';
       }
     }
     if (!map.has(key)) map.set(key, []);
@@ -453,7 +465,7 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
       >
         {/* Filter pills */}
         <div className="flex items-center gap-1">
-          <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Filter:</span>
+          <span className="text-xs font-bold mr-1" style={{ color: 'var(--text-primary)' }}>Filter:</span>
           {FILTER_OPTIONS.map((opt) => {
             const count = filterCounts[opt.value];
             if (opt.value !== 'all' && count === 0) return null;
@@ -481,7 +493,7 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
 
         {/* Group selector */}
         <div className="flex items-center gap-1">
-          <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Group:</span>
+          <span className="text-xs font-bold mr-1" style={{ color: 'var(--text-primary)' }}>Group:</span>
           {GROUP_OPTIONS.map((opt) => {
             const isActive = groupMode === opt.value;
             return (
@@ -504,7 +516,7 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
 
         {/* Sort selector */}
         <div className="flex items-center gap-1">
-          <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Sort:</span>
+          <span className="text-xs font-bold mr-1" style={{ color: 'var(--text-primary)' }}>Sort:</span>
           {SORT_OPTIONS.map((opt) => {
             const isActive = sortMode === opt.value;
             return (
