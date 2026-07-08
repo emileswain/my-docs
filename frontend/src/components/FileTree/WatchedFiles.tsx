@@ -30,6 +30,7 @@ function timeAgo(timestamp: number): string {
 export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
   const [watchResults, setWatchResults] = useState<WatchResult[]>([]);
   const [collapsedWatches, setCollapsedWatches] = useState<Set<string>>(new Set());
+  const [refreshingWatch, setRefreshingWatch] = useState<string | null>(null);
   const currentProject = useProjectStore((state) => state.currentSubProject);
   const currentFile = useProjectStore((state) => state.currentFile);
 
@@ -50,8 +51,22 @@ export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
     loadWatchedFiles();
   }, [loadWatchedFiles]);
 
-  // Filter out watches with no files
-  const activeResults = watchResults.filter(r => r.files.length > 0);
+  const handleRefreshScript = async (watchId: string) => {
+    if (!currentProject || refreshingWatch) return;
+    setRefreshingWatch(watchId);
+    try {
+      await settingsService.refreshWatchScript(currentProject.id, watchId);
+      // Reload watched files to reflect updated pattern
+      await loadWatchedFiles();
+    } catch (err) {
+      console.error('Failed to refresh watch script:', err);
+    } finally {
+      setRefreshingWatch(null);
+    }
+  };
+
+  // Filter out watches with no files (but keep watches with scripts even if empty, so user can refresh)
+  const activeResults = watchResults.filter(r => r.files.length > 0 || r.watch.script);
 
   if (activeResults.length === 0) return null;
 
@@ -98,6 +113,19 @@ export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
               >
                 {result.watch.name}
               </span>
+              {result.watch.script && (
+                <button
+                  className="p-0.5 rounded"
+                  style={{ color: 'var(--text-tertiary)' }}
+                  title="Refresh from script"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRefreshScript(result.watch.id);
+                  }}
+                >
+                  <i className={`fas fa-sync-alt text-xs ${refreshingWatch === result.watch.id ? 'fa-spin' : ''}`} />
+                </button>
+              )}
               <span
                 className="text-xs"
                 style={{ color: 'var(--text-tertiary)' }}

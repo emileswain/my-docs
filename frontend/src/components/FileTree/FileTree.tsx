@@ -18,6 +18,35 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   const currentFile = useProjectStore((state) => state.currentFile);
   const leftPanelVisible = useAppStore((state) => state.leftPanelVisible);
   const setLeftPanelVisible = useAppStore((state) => state.setLeftPanelVisible);
+  const leftPanelWidth = useAppStore((state) => state.leftPanelWidth);
+  const setLeftPanelWidth = useAppStore((state) => state.setLeftPanelWidth);
+
+  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeRef.current = { startX: e.clientX, startWidth: leftPanelWidth };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const delta = e.clientX - resizeRef.current.startX;
+      const newWidth = Math.max(180, Math.min(600, resizeRef.current.startWidth + delta));
+      setLeftPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      resizeRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [leftPanelWidth, setLeftPanelWidth]);
 
   const {
     isLoading,
@@ -192,12 +221,13 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
 
   return (
     <div
-      className="panel flex flex-col"
+      className="panel flex flex-col relative"
       style={{
-        minWidth: '200px',
-        width: '300px',
+        minWidth: '180px',
+        width: `${leftPanelWidth}px`,
         backgroundColor: 'var(--surface-panel)',
-        borderRight: '1px solid var(--border-primary)'
+        borderRight: '1px solid var(--border-primary)',
+        flexShrink: 0,
       }}
     >
       <div
@@ -294,6 +324,14 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
         )}
         </div>
       </div>
+      {/* Resize handle */}
+      <div
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 transition-colors"
+        style={{ backgroundColor: 'transparent' }}
+        onMouseDown={handleResizeStart}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+      />
     </div>
   );
 }

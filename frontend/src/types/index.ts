@@ -107,6 +107,7 @@ export interface Watch {
   subfolder: string;
   pattern: string;
   enabled: boolean;
+  script?: string;
   source?: 'global' | 'project';
 }
 

@@ -29,11 +29,13 @@ import { create } from 'zustand';
  * - Panel visibility defaults to true if not in localStorage
  */
 interface AppState {
-  // Panel visibility
+  // Panel visibility and sizing
   leftPanelVisible: boolean;
   rightPanelVisible: boolean;
+  leftPanelWidth: number;
   setLeftPanelVisible: (visible: boolean) => void;
   setRightPanelVisible: (visible: boolean) => void;
+  setLeftPanelWidth: (width: number) => void;
 
   // View mode
   showRaw: boolean;
@@ -49,9 +51,10 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  // Panel visibility
+  // Panel visibility and sizing
   leftPanelVisible: localStorage.getItem('leftPanelVisible') !== 'false',
   rightPanelVisible: localStorage.getItem('rightPanelVisible') !== 'false',
+  leftPanelWidth: parseInt(localStorage.getItem('leftPanelWidth') || '300', 10),
   setLeftPanelVisible: (visible) => {
     set({ leftPanelVisible: visible });
     localStorage.setItem('leftPanelVisible', String(visible));
@@ -59,6 +62,10 @@ export const useAppStore = create<AppState>((set) => ({
   setRightPanelVisible: (visible) => {
     set({ rightPanelVisible: visible });
     localStorage.setItem('rightPanelVisible', String(visible));
+  },
+  setLeftPanelWidth: (width) => {
+    set({ leftPanelWidth: width });
+    localStorage.setItem('leftPanelWidth', String(width));
   },
 
   // View mode

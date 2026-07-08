@@ -251,6 +251,8 @@ def add_global_watch():
         'pattern': data.get('pattern', '*'),
         'enabled': data.get('enabled', True),
     }
+    if data.get('script'):
+        watch['script'] = data['script']
     sm = app.config['settings_manager']
     sm.add_watch(watch)
     return jsonify({'success': True, 'watch': watch})
@@ -323,6 +325,8 @@ def add_project_watch(project_id):
         'pattern': data.get('pattern', '*'),
         'enabled': data.get('enabled', True),
     }
+    if data.get('script'):
+        watch['script'] = data['script']
     project.watches.append(watch)
 
     group = pm.get_group_for_project(project_id)
@@ -464,6 +468,79 @@ def get_watched_files(project_id):
         })
 
     return jsonify({'watches': results})
+
+
+@app.route('/api/projects/<project_id>/watches/<watch_id>/refresh', methods=['POST'])
+def refresh_watch_script(project_id, watch_id):
+    """Run a watch's script to dynamically update its pattern."""
+    import subprocess
+
+    pm = app.config['project_manager']
+    sm = app.config['settings_manager']
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    # Find the watch (check project watches first, then global)
+    watch = None
+    watch_source = None
+
+    for w in project.watches:
+        if w.get('id') == watch_id:
+            watch = w
+            watch_source = 'project'
+            break
+
+    if not watch:
+        for w in sm.get_watches():
+            if w.get('id') == watch_id:
+                watch = w
+                watch_source = 'global'
+                break
+
+    if not watch:
+        return jsonify({'error': 'Watch not found'}), 404
+
+    script = watch.get('script', '').strip()
+    if not script:
+        return jsonify({'error': 'No script configured for this watch'}), 400
+
+    try:
+        result = subprocess.run(
+            script,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=project.path,
+        )
+
+        if result.returncode != 0:
+            return jsonify({
+                'error': f'Script failed: {result.stderr.strip() or "non-zero exit code"}',
+            }), 400
+
+        output = result.stdout.strip()
+        if not output:
+            return jsonify({'error': 'Script returned empty output'}), 400
+
+        # Update the watch pattern with the script output
+        if watch_source == 'project':
+            watch['pattern'] = output
+            pm.save()
+        else:
+            sm.update_watch(watch_id, {'pattern': output})
+
+        return jsonify({
+            'success': True,
+            'pattern': output,
+            'watch': watch,
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Script timed out (10s limit)'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 def restart_all_watchers():

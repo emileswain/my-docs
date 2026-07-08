@@ -92,6 +92,17 @@ export class SettingsService {
     if (!response.ok) throw new Error('Failed to delete project watch');
   }
 
+  async refreshWatchScript(projectId: string, watchId: string): Promise<{ pattern: string }> {
+    const response = await fetch(`/api/projects/${projectId}/watches/${watchId}/refresh`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to refresh watch');
+    }
+    return response.json();
+  }
+
   async getWatchedFiles(projectId: string): Promise<WatchResult[]> {
     const response = await fetch(`/api/projects/${projectId}/watched-files`);
     if (!response.ok) throw new Error('Failed to fetch watched files');
