@@ -51,15 +51,16 @@ export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
     loadWatchedFiles();
   }, [loadWatchedFiles]);
 
-  const handleRefreshScript = async (watchId: string) => {
+  const handleRefresh = async (watchId: string, hasScript: boolean) => {
     if (!currentProject || refreshingWatch) return;
     setRefreshingWatch(watchId);
     try {
-      await settingsService.refreshWatchScript(currentProject.id, watchId);
-      // Reload watched files to reflect updated pattern
+      if (hasScript) {
+        await settingsService.refreshWatchScript(currentProject.id, watchId);
+      }
       await loadWatchedFiles();
     } catch (err) {
-      console.error('Failed to refresh watch script:', err);
+      console.error('Failed to refresh watch:', err);
     } finally {
       setRefreshingWatch(null);
     }
@@ -113,19 +114,17 @@ export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
               >
                 {result.watch.name}
               </span>
-              {result.watch.script && (
-                <button
-                  className="p-0.5 rounded"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  title="Refresh from script"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRefreshScript(result.watch.id);
-                  }}
-                >
-                  <i className={`fas fa-sync-alt text-xs ${refreshingWatch === result.watch.id ? 'fa-spin' : ''}`} />
-                </button>
-              )}
+              <button
+                className="p-0.5 rounded"
+                style={{ color: 'var(--text-tertiary)' }}
+                title={result.watch.script ? 'Run script & refresh' : 'Refresh files'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRefresh(result.watch.id, !!result.watch.script);
+                }}
+              >
+                <i className={`fas fa-sync-alt text-xs ${refreshingWatch === result.watch.id ? 'fa-spin' : ''}`} />
+              </button>
               <span
                 className="text-xs"
                 style={{ color: 'var(--text-tertiary)' }}
