@@ -7,6 +7,8 @@ import { JsonViewer } from './viewers/JsonViewer';
 import { YamlViewer } from './viewers/YamlViewer';
 import { MermaidViewer } from './viewers/MermaidViewer';
 import { MermaidModal } from './viewers/MermaidModal';
+import { XmlViewer } from './viewers/XmlViewer';
+import { JUnitViewer } from './viewers/JUnitViewer';
 import { RawViewer } from './viewers/RawViewer';
 import { EditableRawViewer, type EditableRawViewerRef } from './viewers/EditableRawViewer';
 import { useScrollPosition } from '../hooks/useScrollPosition';
@@ -56,7 +58,9 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
   const isJson = extension === '.json';
   const isYaml = extension === '.yml' || extension === '.yaml';
   const isMermaid = extension === '.mmd';
-  const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid;
+  const isXml = extension === '.xml';
+  const isJunit = isXml && !!currentFileContent?.junit;
+  const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid || isXml;
   const canEdit = isMarkdown || isJson || isYaml; // Can edit markdown, json, yaml
 
   // Warn user about unsaved changes when navigating away
@@ -111,6 +115,10 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
     if (!currentFileContent) return null;
 
     if (showRaw) {
+      // For JUnit XML, show syntax-highlighted XML source
+      if (isJunit) {
+        return <XmlViewer content={currentFileContent.content} />;
+      }
       // Use editable viewer for markdown, json, yaml
       if (canEdit && currentFile) {
         return (
@@ -157,6 +165,13 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
       );
     }
 
+    if (isXml) {
+      if (isJunit) {
+        return <JUnitViewer junit={currentFileContent.junit!} />;
+      }
+      return <XmlViewer content={currentFileContent.content} />;
+    }
+
     return <RawViewer content={currentFileContent.content} />;
   };
 
@@ -175,6 +190,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
         isSaving={isSaving}
         onSave={handleSaveClick}
         canEdit={canEdit}
+        isJunit={isJunit}
       />
 
       <div

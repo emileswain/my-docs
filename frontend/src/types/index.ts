@@ -23,6 +23,39 @@ export interface FileContent {
   content: string;
   html?: string;
   tree?: TreeNode[];
+  junit?: JUnitData;
+}
+
+export interface JUnitTestCase {
+  name: string;
+  classname?: string;
+  time?: number;
+  status: 'passed' | 'failed' | 'errored' | 'skipped';
+  failure_message?: string;
+  failure_text?: string;
+  file?: string;
+}
+
+export interface JUnitTestSuite {
+  name: string;
+  tests: number;
+  failures: number;
+  errors: number;
+  skipped: number;
+  time: number;
+  testcases: JUnitTestCase[];
+}
+
+export interface JUnitData {
+  summary: {
+    tests: number;
+    passed: number;
+    failures: number;
+    errors: number;
+    skipped: number;
+    time: number;
+  };
+  testsuites: JUnitTestSuite[];
 }
 
 export interface BrowseResponse {

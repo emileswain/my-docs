@@ -181,7 +181,7 @@ def browse_all_folders(project_identifier):
 
                     if item.is_file():
                         # Only include supported file types
-                        if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd']:
+                        if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
                             stat = item.stat()
                             items.append({
                                 'name': item.name,
@@ -191,7 +191,7 @@ def browse_all_folders(project_identifier):
                                 'modified': stat.st_mtime,
                                 'created': stat.st_birthtime if hasattr(stat, 'st_birthtime') else stat.st_ctime,
                             })
-                    elif item.is_dir() and not item.name.startswith('.'):
+                    elif item.is_dir():
                         items.append({
                             'name': item.name,
                             'path': str(item),
@@ -241,7 +241,7 @@ def browse_project(project_identifier, subpath=''):
         for item in folder_path.iterdir():
             if item.is_file():
                 # Only include supported file types
-                if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd']:
+                if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
                     stat = item.stat()
                     items.append({
                         'name': item.name,
@@ -251,7 +251,7 @@ def browse_project(project_identifier, subpath=''):
                         'modified': stat.st_mtime,
                         'created': stat.st_birthtime if hasattr(stat, 'st_birthtime') else stat.st_ctime,
                     })
-            elif item.is_dir() and not item.name.startswith('.'):
+            elif item.is_dir():
                 items.append({
                     'name': item.name,
                     'path': str(item),
@@ -321,10 +321,22 @@ def get_file_tree(file_path):
             md = markdown.Markdown(extensions=['fenced_code', 'tables'])
             html_content = md.convert(content)
 
+        # Parse JUnit XML if applicable
+        junit_data = None
+        if file_path.endswith('.xml'):
+            try:
+                import xml.etree.ElementTree as ET
+                root = ET.fromstring(content)
+                if root.tag in ('testsuites', 'testsuite'):
+                    junit_data = parser.parse_junit_xml(content)
+            except ET.ParseError:
+                pass
+
         return jsonify({
             'tree': tree,
             'content': content,
             'html': html_content,
+            'junit': junit_data,
             'type': Path(file_path).suffix.lower()
         })
     except Exception as e:

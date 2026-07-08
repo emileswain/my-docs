@@ -2,6 +2,7 @@
 
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -34,6 +35,8 @@ class FileParser:
             return self._parse_yaml()
         elif self.extension == '.mmd':
             return self._parse_mermaid()
+        elif self.extension == '.xml':
+            return self._parse_xml()
         else:
             return []
 
@@ -232,3 +235,127 @@ class FileParser:
                 'type': type_name,
                 'children': []
             }]
+
+    def _parse_xml(self) -> List[Dict[str, Any]]:
+        """Parse XML file and extract element hierarchy."""
+        try:
+            content = self.get_raw_content()
+            root = ET.fromstring(content)
+            return self._build_xml_tree(root)
+        except ET.ParseError as e:
+            return [{'label': f'XML Parse Error: {str(e)}', 'children': []}]
+
+    def _build_xml_tree(self, element: ET.Element) -> List[Dict[str, Any]]:
+        """Build tree structure from an XML element."""
+        # Strip namespace prefix for display
+        tag = element.tag.split('}')[-1] if '}' in element.tag else element.tag
+
+        label = tag
+        if element.attrib:
+            attrs = ' '.join(f'{k}="{v}"' for k, v in list(element.attrib.items())[:3])
+            label = f'{tag} ({attrs})'
+
+        children = []
+        for child in element:
+            children.extend(self._build_xml_tree(child))
+
+        return [{'label': label, 'type': 'element', 'children': children}]
+
+    def parse_junit_xml(self, content: str = None) -> Dict[str, Any]:
+        """Parse JUnit XML into structured test result data."""
+        if content is None:
+            content = self.get_raw_content()
+
+        root = ET.fromstring(content)
+
+        # Handle both <testsuites> and bare <testsuite> root
+        if root.tag == 'testsuites':
+            suite_elements = root.findall('testsuite')
+        elif root.tag == 'testsuite':
+            suite_elements = [root]
+        else:
+            return None
+
+        total_tests = 0
+        total_failures = 0
+        total_errors = 0
+        total_skipped = 0
+        total_time = 0.0
+        testsuites = []
+
+        for suite_el in suite_elements:
+            suite_tests = int(suite_el.get('tests', '0'))
+            suite_failures = int(suite_el.get('failures', '0'))
+            suite_errors = int(suite_el.get('errors', '0'))
+            suite_skipped = int(suite_el.get('skipped', '0'))
+            suite_time = float(suite_el.get('time', '0'))
+
+            total_tests += suite_tests
+            total_failures += suite_failures
+            total_errors += suite_errors
+            total_skipped += suite_skipped
+            total_time += suite_time
+
+            testcases = []
+            for tc_el in suite_el.findall('testcase'):
+                failure_el = tc_el.find('failure')
+                error_el = tc_el.find('error')
+                skipped_el = tc_el.find('skipped')
+
+                if failure_el is not None:
+                    status = 'failed'
+                    failure_message = failure_el.get('message', '')
+                    failure_text = failure_el.text or ''
+                elif error_el is not None:
+                    status = 'errored'
+                    failure_message = error_el.get('message', '')
+                    failure_text = error_el.text or ''
+                elif skipped_el is not None:
+                    status = 'skipped'
+                    failure_message = skipped_el.get('message', '')
+                    failure_text = ''
+                else:
+                    status = 'passed'
+                    failure_message = None
+                    failure_text = None
+
+                tc = {
+                    'name': tc_el.get('name', 'unnamed'),
+                    'classname': tc_el.get('classname'),
+                    'time': float(tc_el.get('time', '0')),
+                    'status': status,
+                }
+                if failure_message is not None:
+                    tc['failure_message'] = failure_message
+                if failure_text is not None:
+                    tc['failure_text'] = failure_text
+
+                file_attr = tc_el.get('file')
+                if file_attr:
+                    tc['file'] = file_attr
+
+                testcases.append(tc)
+
+            testsuites.append({
+                'name': suite_el.get('name', 'unnamed'),
+                'tests': suite_tests,
+                'failures': suite_failures,
+                'errors': suite_errors,
+                'skipped': suite_skipped,
+                'time': suite_time,
+                'testcases': testcases,
+            })
+
+        total_passed = total_tests - total_failures - total_errors - total_skipped
+
+        return {
+            'summary': {
+                'tests': total_tests,
+                'passed': total_passed,
+                'failures': total_failures,
+                'errors': total_errors,
+                'skipped': total_skipped,
+                'time': round(total_time, 3),
+            },
+            'testsuites': testsuites,
+        }

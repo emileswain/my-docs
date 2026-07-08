@@ -8,6 +8,14 @@ export default defineConfig({
   server: {
     port: 3030,
     proxy: {
+      '/api/events': {
+        target: 'http://localhost:6060',
+        changeOrigin: true,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      },
       '/api': {
         target: 'http://localhost:6060',
         changeOrigin: true,

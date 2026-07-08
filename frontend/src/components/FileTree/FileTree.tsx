@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useAppStore } from '../../store/useAppStore';
 import { useFileTree } from '../../hooks/useFileTree';
@@ -34,11 +34,16 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     }
   }, [currentProject, loadFileTree]);
 
-  // Listen for file system changes
-  useFileSystemEvents(currentProject?.id || null, useCallback(() => {
-    console.log('File system change detected, refreshing cache...');
-    loadFileTree();
-  }, [loadFileTree]));
+  // Listen for file system changes with debounce
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const onFileSystemEvent = useCallback(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      console.log('File system change detected, refreshing cache...');
+      loadFileTree();
+    }, 300);
+  }, [loadFileTree]);
+  useFileSystemEvents(currentProject?.id || null, onFileSystemEvent);
 
   // Expand to show current file when it changes
   useEffect(() => {
