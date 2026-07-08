@@ -237,6 +237,235 @@ def update_settings():
     return jsonify({'success': True, 'settings': sm.get_all()})
 
 
+# --- Watch endpoints ---
+
+@app.route('/api/settings/watches', methods=['POST'])
+def add_global_watch():
+    """Add a global watch."""
+    from .project import generate_id
+    data = request.json
+    watch = {
+        'id': generate_id(),
+        'name': data.get('name', 'Untitled Watch'),
+        'subfolder': data.get('subfolder', ''),
+        'pattern': data.get('pattern', '*'),
+        'enabled': data.get('enabled', True),
+    }
+    sm = app.config['settings_manager']
+    sm.add_watch(watch)
+    return jsonify({'success': True, 'watch': watch})
+
+
+@app.route('/api/settings/watches/<watch_id>', methods=['PUT'])
+def update_global_watch(watch_id):
+    """Update a global watch."""
+    data = request.json
+    sm = app.config['settings_manager']
+    if sm.update_watch(watch_id, data):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Watch not found'}), 404
+
+
+@app.route('/api/settings/watches/<watch_id>', methods=['DELETE'])
+def delete_global_watch(watch_id):
+    """Delete a global watch."""
+    sm = app.config['settings_manager']
+    if sm.remove_watch(watch_id):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Watch not found'}), 404
+
+
+@app.route('/api/projects/<project_id>/watches', methods=['GET'])
+def get_project_watches(project_id):
+    """Get resolved watches for a project (global + project-specific, with overrides applied)."""
+    pm = app.config['project_manager']
+    sm = app.config['settings_manager']
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    # Resolve active watches: global (respecting enabled/disabled overrides) + project-specific
+    global_watches = sm.get_watches()
+    active_watches = []
+
+    for gw in global_watches:
+        wid = gw.get('id')
+        # Project can disable a globally-enabled watch, or enable a globally-disabled one
+        if wid in project.disabled_watches:
+            continue
+        if gw.get('enabled') or wid in project.enabled_watches:
+            active_watches.append({**gw, 'source': 'global'})
+
+    # Add project-specific watches
+    for pw in project.watches:
+        if pw.get('enabled', True):
+            active_watches.append({**pw, 'source': 'project'})
+
+    return jsonify(active_watches)
+
+
+@app.route('/api/projects/<project_id>/watches', methods=['POST'])
+def add_project_watch(project_id):
+    """Add a project-specific watch."""
+    from .project import generate_id
+    pm = app.config['project_manager']
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    data = request.json
+    watch = {
+        'id': generate_id(),
+        'name': data.get('name', 'Untitled Watch'),
+        'subfolder': data.get('subfolder', ''),
+        'pattern': data.get('pattern', '*'),
+        'enabled': data.get('enabled', True),
+    }
+    project.watches.append(watch)
+
+    group = pm.get_group_for_project(project_id)
+    if group:
+        pm.save()
+
+    return jsonify({'success': True, 'watch': watch})
+
+
+@app.route('/api/projects/<project_id>/watches/<watch_id>', methods=['PUT'])
+def update_project_watch(project_id, watch_id):
+    """Update a project-specific watch or toggle a global watch override."""
+    pm = app.config['project_manager']
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    data = request.json
+
+    # Check if it's a project-specific watch
+    for w in project.watches:
+        if w.get('id') == watch_id:
+            w.update(data)
+            pm.save()
+            return jsonify({'success': True})
+
+    # It's a global watch override
+    if 'enabled' in data:
+        if data['enabled']:
+            # Enable: remove from disabled, add to enabled
+            if watch_id in project.disabled_watches:
+                project.disabled_watches.remove(watch_id)
+            if watch_id not in project.enabled_watches:
+                project.enabled_watches.append(watch_id)
+        else:
+            # Disable: remove from enabled, add to disabled
+            if watch_id in project.enabled_watches:
+                project.enabled_watches.remove(watch_id)
+            if watch_id not in project.disabled_watches:
+                project.disabled_watches.append(watch_id)
+        pm.save()
+        return jsonify({'success': True})
+
+    return jsonify({'error': 'Watch not found'}), 404
+
+
+@app.route('/api/projects/<project_id>/watches/<watch_id>', methods=['DELETE'])
+def delete_project_watch(project_id, watch_id):
+    """Delete a project-specific watch."""
+    pm = app.config['project_manager']
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    original_len = len(project.watches)
+    project.watches = [w for w in project.watches if w.get('id') != watch_id]
+    if len(project.watches) < original_len:
+        pm.save()
+        return jsonify({'success': True})
+
+    return jsonify({'error': 'Watch not found'}), 404
+
+
+@app.route('/api/projects/<project_id>/watched-files', methods=['GET'])
+def get_watched_files(project_id):
+    """Get files matching active watches for a project."""
+    import fnmatch
+
+    pm = app.config['project_manager']
+    sm = app.config['settings_manager']
+    excluded = sm.get_excluded_folders_set()
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    # Resolve active watches
+    global_watches = sm.get_watches()
+    active_watches = []
+
+    for gw in global_watches:
+        wid = gw.get('id')
+        if wid in project.disabled_watches:
+            continue
+        if gw.get('enabled') or wid in project.enabled_watches:
+            active_watches.append(gw)
+
+    for pw in project.watches:
+        if pw.get('enabled', True):
+            active_watches.append(pw)
+
+    if not active_watches:
+        return jsonify({'watches': []})
+
+    root = Path(project.path)
+    results = []
+
+    for watch in active_watches:
+        subfolder = watch.get('subfolder', '').strip('/')
+        pattern = watch.get('pattern', '*')
+        search_path = root / subfolder if subfolder else root
+
+        if not search_path.is_dir():
+            results.append({
+                'watch': watch,
+                'files': [],
+            })
+            continue
+
+        matched_files = []
+        try:
+            for item in search_path.iterdir():
+                if item.is_dir() and item.name in excluded:
+                    continue
+                if item.is_file():
+                    if item.suffix.lower() not in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
+                        continue
+                    if fnmatch.fnmatch(item.name, pattern):
+                        stat = item.stat()
+                        matched_files.append({
+                            'name': item.name,
+                            'path': str(item),
+                            'type': 'file',
+                            'extension': item.suffix.lower(),
+                            'modified': stat.st_mtime,
+                            'created': stat.st_birthtime if hasattr(stat, 'st_birthtime') else stat.st_ctime,
+                        })
+        except (PermissionError, OSError):
+            pass
+
+        # Sort by modified time, newest first
+        matched_files.sort(key=lambda x: x['modified'], reverse=True)
+
+        results.append({
+            'watch': watch,
+            'files': matched_files,
+        })
+
+    return jsonify({'watches': results})
+
+
 def restart_all_watchers():
     """Restart all file watchers with current settings."""
     pm = app.config['project_manager']

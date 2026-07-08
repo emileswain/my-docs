@@ -12,6 +12,7 @@ DEFAULT_SETTINGS = {
         '.gradle', '.idea', '.vscode', 'coverage', '.cache',
         '.parcel-cache', '.turbo', 'obj', 'bin',
     ],
+    'watches': [],
 }
 
 
@@ -57,3 +58,29 @@ class SettingsManager:
 
     def get_excluded_folders_set(self) -> set:
         return set(self.get_excluded_folders())
+
+    def get_watches(self) -> List[Dict]:
+        return self.get('watches') or []
+
+    def add_watch(self, watch: Dict) -> Dict:
+        watches = self.get_watches()
+        watches.append(watch)
+        self.set('watches', watches)
+        return watch
+
+    def update_watch(self, watch_id: str, updates: Dict) -> bool:
+        watches = self.get_watches()
+        for w in watches:
+            if w.get('id') == watch_id:
+                w.update(updates)
+                self.set('watches', watches)
+                return True
+        return False
+
+    def remove_watch(self, watch_id: str) -> bool:
+        watches = self.get_watches()
+        filtered = [w for w in watches if w.get('id') != watch_id]
+        if len(filtered) < len(watches):
+            self.set('watches', filtered)
+            return True
+        return False

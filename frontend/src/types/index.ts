@@ -47,6 +47,7 @@ export interface FileItem {
   path: string;
   type: 'file' | 'folder';
   extension?: string;
+  modified?: number;
 }
 
 export interface TreeNode {
@@ -98,4 +99,18 @@ export interface BrowseResponse {
   project: Project;
   path: string;
   items: FileItem[];
+}
+
+export interface Watch {
+  id: string;
+  name: string;
+  subfolder: string;
+  pattern: string;
+  enabled: boolean;
+  source?: 'global' | 'project';
+}
+
+export interface WatchResult {
+  watch: Watch;
+  files: FileItem[];
 }

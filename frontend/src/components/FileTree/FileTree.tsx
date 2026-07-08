@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useFileTree } from '../../hooks/useFileTree';
 import { useFileSystemEvents } from '../../hooks/useFileSystemEvents';
 import { FileTreeItem } from './FileTreeItem';
+import { WatchedFiles } from './WatchedFiles';
 
 interface FileTreeProps {
   onFileSelect: (path: string, name: string) => void;
@@ -267,7 +268,11 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
           </svg>
         </button>
       </div>
-      <div className="text-sm p-4 flex-1 overflow-y-auto">
+      <div className="text-sm flex-1 overflow-y-auto">
+        {/* Watched files section */}
+        {currentProject && <WatchedFiles onFileSelect={onFileSelect} />}
+
+        <div className="p-4">
         {!currentProject ? (
           <p className="italic text-sm" style={{ color: 'var(--text-tertiary)' }}>Select a project to browse</p>
         ) : isLoading ? (
@@ -287,6 +292,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
             />
           ))
         )}
+        </div>
       </div>
     </div>
   );

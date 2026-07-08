@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { settingsService } from '../../services/settingsService';
 import type { AppSettings } from '../../services/settingsService';
+import { WatchEditor } from './WatchEditor';
 
 export function SettingsPanel() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -164,6 +165,50 @@ export function SettingsPanel() {
             No excluded folders. All folders will be watched and browsable.
           </p>
         )}
+      </div>
+
+      {/* Global Watches */}
+      <div className="mt-6">
+        <WatchEditor
+          watches={settings.watches || []}
+          label="Global Watches"
+          description="Watches defined here apply to all projects by default. Projects can override or disable individual watches. Files matching a watch appear at the top of the file tree."
+          onAdd={async (data) => {
+            try {
+              const watch = await settingsService.addGlobalWatch(data);
+              setSettings({ ...settings, watches: [...(settings.watches || []), watch] });
+              showMessage('Watch added', 'success');
+            } catch (err) {
+              showMessage(err instanceof Error ? err.message : 'Failed to add watch', 'error');
+            }
+          }}
+          onUpdate={async (id, updates) => {
+            try {
+              await settingsService.updateGlobalWatch(id, updates);
+              setSettings({
+                ...settings,
+                watches: (settings.watches || []).map(w =>
+                  w.id === id ? { ...w, ...updates } : w
+                ),
+              });
+              showMessage('Watch updated', 'success');
+            } catch (err) {
+              showMessage(err instanceof Error ? err.message : 'Failed to update watch', 'error');
+            }
+          }}
+          onDelete={async (id) => {
+            try {
+              await settingsService.deleteGlobalWatch(id);
+              setSettings({
+                ...settings,
+                watches: (settings.watches || []).filter(w => w.id !== id),
+              });
+              showMessage('Watch deleted', 'success');
+            } catch (err) {
+              showMessage(err instanceof Error ? err.message : 'Failed to delete watch', 'error');
+            }
+          }}
+        />
       </div>
     </div>
   );

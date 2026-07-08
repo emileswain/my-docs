@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { ProjectGroup, SubProject } from '../types';
+import type { ProjectGroup, SubProject, Watch } from '../types';
 import type { CreateGroupDto, CreateSubProjectDto, UpdateSubProjectDto } from '../services/projectService';
 import { useProjects } from '../hooks/useProjects';
+import { settingsService } from '../services/settingsService';
 import { Modal } from './common/Modal';
 import { AdminHeader } from './admin/AdminHeader';
 import { AdminSidebar } from './admin/AdminSidebar';
@@ -9,15 +10,18 @@ import { SubProjectCard } from './admin/SubProjectCard';
 import { SubProjectForm } from './admin/SubProjectForm';
 import { GroupForm } from './admin/GroupForm';
 import { SettingsPanel } from './admin/SettingsPanel';
+import { WatchEditor } from './admin/WatchEditor';
 
 export function Admin() {
   const { groups, loadGroups, createGroup, updateGroup, deleteGroup, createSubProject, updateSubProject, deleteSubProject } = useProjects();
 
   const [activeSection, setActiveSection] = useState('projects');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'group' | 'subproject'>('group');
+  const [modalMode, setModalMode] = useState<'group' | 'subproject' | 'watches'>('group');
   const [editingGroup, setEditingGroup] = useState<ProjectGroup | null>(null);
   const [editingSubProject, setEditingSubProject] = useState<{ groupId: string; sub: SubProject } | null>(null);
+  const [watchesTarget, setWatchesTarget] = useState<{ projectId: string; title: string } | null>(null);
+  const [projectWatches, setProjectWatches] = useState<Watch[]>([]);
   const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -124,16 +128,34 @@ export function Admin() {
     }
   };
 
+  // Watch actions
+  const openWatchesModal = async (projectId: string, title: string) => {
+    setWatchesTarget({ projectId, title });
+    setModalMode('watches');
+    try {
+      const watches = await settingsService.getProjectWatches(projectId);
+      setProjectWatches(watches);
+    } catch {
+      setProjectWatches([]);
+    }
+    setIsModalOpen(true);
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingGroup(null);
     setEditingSubProject(null);
     setTargetGroupId(null);
+    setWatchesTarget(null);
+    setProjectWatches([]);
   };
 
   const getModalTitle = () => {
     if (modalMode === 'group') {
       return editingGroup ? 'Edit Group' : 'Add Group';
+    }
+    if (modalMode === 'watches') {
+      return `Watches — ${watchesTarget?.title || ''}`;
     }
     return editingSubProject ? 'Edit Sub-project' : 'Add Sub-project';
   };
@@ -264,6 +286,7 @@ export function Admin() {
                             groupSlug={group.slug}
                             onEdit={() => openEditSubProjectModal(group.id, sub)}
                             onDelete={() => handleDeleteSubProject(group.id, sub)}
+                            onWatches={() => openWatchesModal(sub.id, sub.title)}
                           />
                         ))
                       )}
@@ -287,6 +310,24 @@ export function Admin() {
             group={editingGroup}
             onSubmit={handleGroupSubmit}
             onCancel={closeModal}
+          />
+        ) : modalMode === 'watches' && watchesTarget ? (
+          <WatchEditor
+            watches={projectWatches}
+            label="Project Watches"
+            description="Watches specific to this sub-project. Global watches are also shown — you can enable/disable them per-project."
+            onAdd={async (data) => {
+              const watch = await settingsService.addProjectWatch(watchesTarget.projectId, data);
+              setProjectWatches(prev => [...prev, { ...watch, source: 'project' as const }]);
+            }}
+            onUpdate={async (id, updates) => {
+              await settingsService.updateProjectWatch(watchesTarget.projectId, id, updates);
+              setProjectWatches(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
+            }}
+            onDelete={async (id) => {
+              await settingsService.deleteProjectWatch(watchesTarget.projectId, id);
+              setProjectWatches(prev => prev.filter(w => w.id !== id));
+            }}
           />
         ) : (
           <SubProjectForm

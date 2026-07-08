@@ -6,9 +6,10 @@ interface SubProjectCardProps {
   groupSlug: string;
   onEdit: () => void;
   onDelete: () => void;
+  onWatches?: () => void;
 }
 
-export function SubProjectCard({ subProject, groupSlug, onEdit, onDelete }: SubProjectCardProps) {
+export function SubProjectCard({ subProject, groupSlug, onEdit, onDelete, onWatches }: SubProjectCardProps) {
   return (
     <div
       className="rounded-md px-5 py-3 flex items-center justify-between"
@@ -59,6 +60,18 @@ export function SubProjectCard({ subProject, groupSlug, onEdit, onDelete }: SubP
         >
           <i className="fas fa-eye text-sm"></i>
         </a>
+        {onWatches && (
+          <button
+            onClick={onWatches}
+            className="p-1.5 rounded-md transition-colors"
+            style={{ color: 'var(--accent-primary)' }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            title="Watches"
+          >
+            <i className="fas fa-binoculars text-sm"></i>
+          </button>
+        )}
         <button
           onClick={onEdit}
           className="p-1.5 rounded-md transition-colors"

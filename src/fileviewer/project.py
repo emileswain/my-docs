@@ -50,6 +50,9 @@ class Project:
         slug: Optional[str] = None,
         project_id: Optional[str] = None,
         project_type: Optional[str] = None,
+        watches: Optional[List[Dict]] = None,
+        disabled_watches: Optional[List[str]] = None,
+        enabled_watches: Optional[List[str]] = None,
     ):
         self.path = path
         self.title = title or Path(path).name
@@ -59,9 +62,12 @@ class Project:
         self.project_type = project_type or 'web'
         if self.project_type not in VALID_SUBPROJECT_TYPES:
             self.project_type = 'web'
+        self.watches: List[Dict] = watches or []
+        self.disabled_watches: List[str] = disabled_watches or []
+        self.enabled_watches: List[str] = enabled_watches or []
 
     def to_dict(self) -> Dict:
-        return {
+        d = {
             'id': self.project_id,
             'title': self.title,
             'description': self.description,
@@ -69,6 +75,13 @@ class Project:
             'slug': self.slug,
             'type': self.project_type,
         }
+        if self.watches:
+            d['watches'] = self.watches
+        if self.disabled_watches:
+            d['disabled_watches'] = self.disabled_watches
+        if self.enabled_watches:
+            d['enabled_watches'] = self.enabled_watches
+        return d
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'Project':
@@ -79,6 +92,9 @@ class Project:
             slug=data.get('slug'),
             project_id=data.get('id'),
             project_type=data.get('type'),
+            watches=data.get('watches'),
+            disabled_watches=data.get('disabled_watches'),
+            enabled_watches=data.get('enabled_watches'),
         )
 
 
