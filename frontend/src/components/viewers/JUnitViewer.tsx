@@ -230,30 +230,43 @@ function CollapsibleGroup({
   const hasFailures = group.failCount > 0;
 
   return (
-    <div style={{ borderBottom: '1px solid var(--border-primary)' }}>
+    <div>
+      {/* Group header */}
       <div
-        className="flex items-center gap-2 px-4 py-2 cursor-pointer"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}
+        className="flex items-center gap-2 px-4 py-2.5 cursor-pointer"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-primary)',
+          borderTop: '2px solid var(--border-primary)',
+        }}
         onClick={() => setIsOpen(!isOpen)}
       >
         <i
           className={`fas fa-chevron-${isOpen ? 'down' : 'right'} text-xs`}
           style={{ color: 'var(--text-tertiary)', width: '10px' }}
         />
-        <span className="text-xs font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>
+        <i
+          className="fas fa-folder text-xs"
+          style={{ color: hasFailures ? '#ef4444' : 'var(--accent-primary)' }}
+        />
+        <span className="text-sm font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>
           {group.label}
         </span>
         {hasFailures && (
-          <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>
+          <span
+            className="text-xs font-semibold px-1.5 py-0.5 rounded"
+            style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+          >
             {group.failCount} failed
           </span>
         )}
         <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          {filter !== 'all' ? `${sorted.length}/` : ''}{group.totalCount}
+          {filter !== 'all' ? `${sorted.length}/` : ''}{group.totalCount} tests
         </span>
       </div>
+      {/* Indented test rows */}
       {isOpen && (
-        <div>
+        <div style={{ paddingLeft: '1rem', borderLeft: `2px solid ${hasFailures ? 'rgba(239, 68, 68, 0.3)' : 'var(--border-secondary)'}`, marginLeft: '0.75rem' }}>
           {sorted.map((tc, i) => (
             <TestCaseRow key={i} tc={tc} />
           ))}
