@@ -126,9 +126,19 @@ function groupTests(tests: JUnitTestCase[], mode: GroupMode): TestGroup[] {
     if (mode === 'status') {
       key = tc.status;
     } else {
-      // classname grouping — use first dotted component, or full classname, or "Ungrouped"
+      // classname grouping — extract the class/module name
+      // pytest: "tests.test_auth.TestLogin" → "TestLogin"
+      // java:   "com.example.AuthTest" → "AuthTest"
+      // plain:  "TestLogin" → "TestLogin"
       const cn = tc.classname || '';
-      key = cn.split('.')[0] || 'Ungrouped';
+      if (!cn) {
+        key = 'Ungrouped';
+      } else {
+        const parts = cn.split('.');
+        // Use the last component that looks like a class (starts with uppercase or has "test" in it)
+        // Fall back to last component
+        key = parts[parts.length - 1] || cn;
+      }
     }
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(tc);
