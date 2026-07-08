@@ -13,12 +13,15 @@ from flask_cors import CORS
 from .watcher import FolderWatcher
 from .file_parser import FileParser
 from .project import ProjectManager
+from .settings import SettingsManager
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for development
 app.config['project_manager'] = None
+app.config['settings_manager'] = None
 app.config['watchers'] = {}
 app.config['config_file'] = Path.home() / '.fileviewer' / 'projects.json'
+app.config['config_dir'] = Path.home() / '.fileviewer'
 app.config['change_queues'] = []  # List of queues for SSE clients
 
 
@@ -63,7 +66,9 @@ def start_watcher_for_project(project):
             broadcast_change(event.event_type, event.src_path, proj_id)
         return on_change
 
-    watcher = FolderWatcher(project.path, callback=make_callback(project.project_id))
+    sm = app.config['settings_manager']
+    excluded = sm.get_excluded_folders_set() if sm else set()
+    watcher = FolderWatcher(project.path, callback=make_callback(project.project_id), excluded_folders=excluded)
     app.config['watchers'][project.project_id] = watcher
     watcher.start()
 
@@ -209,6 +214,43 @@ def delete_subproject(group_id, sub_id):
     return jsonify({'error': 'Group or sub-project not found'}), 404
 
 
+# --- Settings endpoints ---
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """Get all settings."""
+    sm = app.config['settings_manager']
+    return jsonify(sm.get_all())
+
+
+@app.route('/api/settings', methods=['PUT'])
+def update_settings():
+    """Update settings."""
+    data = request.json
+    sm = app.config['settings_manager']
+    sm.update(data)
+
+    # If excluded folders changed, restart all watchers
+    if 'excluded_folders' in data:
+        restart_all_watchers()
+
+    return jsonify({'success': True, 'settings': sm.get_all()})
+
+
+def restart_all_watchers():
+    """Restart all file watchers with current settings."""
+    pm = app.config['project_manager']
+
+    # Stop all existing watchers
+    for watcher in app.config['watchers'].values():
+        watcher.stop()
+    app.config['watchers'].clear()
+
+    # Restart with updated excluded folders
+    for project in pm.get_all_projects():
+        start_watcher_for_project(project)
+
+
 # --- Backward-compatible project endpoints ---
 
 @app.route('/api/projects', methods=['GET'])
@@ -316,7 +358,8 @@ def browse_all_folders(project_identifier):
         return jsonify({'error': 'Project not found'}), 404
 
     root_path = Path(project.path)
-    excluded_folders = {'node_modules', '.git', '__pycache__', '.venv', 'venv', 'dist', 'build'}
+    sm = app.config['settings_manager']
+    excluded_folders = sm.get_excluded_folders_set() if sm else set()
 
     try:
         cache = {}
@@ -377,11 +420,15 @@ def browse_project(project_identifier, subpath=''):
         return jsonify({'error': 'Project not found'}), 404
 
     folder_path = Path(project.path) / subpath if subpath else Path(project.path)
+    sm = app.config['settings_manager']
+    excluded_folders = sm.get_excluded_folders_set() if sm else set()
 
     try:
         items = []
 
         for item in folder_path.iterdir():
+            if item.is_dir() and item.name in excluded_folders:
+                continue
             if item.is_file():
                 if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
                     stat = item.stat()
@@ -535,6 +582,9 @@ def main():
 
     pm = ProjectManager(config_file)
     app.config['project_manager'] = pm
+
+    sm = SettingsManager(app.config['config_dir'])
+    app.config['settings_manager'] = sm
 
     # Start watchers for all sub-projects
     for project in pm.get_all_projects():

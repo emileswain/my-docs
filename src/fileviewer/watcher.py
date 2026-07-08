@@ -1,8 +1,7 @@
 """File system watcher for monitoring folder changes."""
 
-import threading
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Set
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
@@ -11,29 +10,26 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 class FolderEventHandler(FileSystemEventHandler):
     """Handler for file system events."""
 
-    def __init__(self, callback: Optional[Callable] = None):
-        """Initialize the event handler.
-
-        Args:
-            callback: Optional callback function to call on file changes
-        """
+    def __init__(self, callback: Optional[Callable] = None, excluded_folders: Optional[Set[str]] = None):
         self.callback = callback
+        self.excluded_folders = excluded_folders or set()
         super().__init__()
 
-    def on_any_event(self, event: FileSystemEvent):
-        """Handle any file system event.
+    def _is_excluded(self, path: str) -> bool:
+        """Check if a path contains an excluded folder."""
+        parts = Path(path).parts
+        return any(part in self.excluded_folders for part in parts)
 
-        Args:
-            event: The file system event
-        """
-        # Process both files and directories
+    def on_any_event(self, event: FileSystemEvent):
+        # Skip events in excluded folders
+        if self._is_excluded(event.src_path):
+            return
+
         is_relevant = False
 
         if event.is_directory:
-            # Always notify about directory changes
             is_relevant = True
         else:
-            # Only process supported file types
             is_relevant = event.src_path.endswith(('.md', '.json', '.yml', '.yaml', '.mmd', '.xml'))
 
         if is_relevant:
@@ -45,17 +41,11 @@ class FolderEventHandler(FileSystemEventHandler):
 class FolderWatcher:
     """Watches a folder for file changes."""
 
-    def __init__(self, folder_path: str, callback: Optional[Callable] = None):
-        """Initialize the folder watcher.
-
-        Args:
-            folder_path: Path to the folder to watch
-            callback: Optional callback function to call on file changes
-        """
+    def __init__(self, folder_path: str, callback: Optional[Callable] = None, excluded_folders: Optional[Set[str]] = None):
         self.folder_path = Path(folder_path)
         self.callback = callback
         self.observer = Observer()
-        self.event_handler = FolderEventHandler(callback)
+        self.event_handler = FolderEventHandler(callback, excluded_folders)
         self._running = False
 
     def start(self):
@@ -79,9 +69,4 @@ class FolderWatcher:
             print(f"Stopped watching: {self.folder_path}")
 
     def is_running(self) -> bool:
-        """Check if the watcher is running.
-
-        Returns:
-            True if the watcher is running, False otherwise
-        """
         return self._running

@@ -8,10 +8,12 @@ import { AdminSidebar } from './admin/AdminSidebar';
 import { SubProjectCard } from './admin/SubProjectCard';
 import { SubProjectForm } from './admin/SubProjectForm';
 import { GroupForm } from './admin/GroupForm';
+import { SettingsPanel } from './admin/SettingsPanel';
 
 export function Admin() {
   const { groups, loadGroups, createGroup, updateGroup, deleteGroup, createSubProject, updateSubProject, deleteSubProject } = useProjects();
 
+  const [activeSection, setActiveSection] = useState('projects');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'group' | 'subproject'>('group');
   const [editingGroup, setEditingGroup] = useState<ProjectGroup | null>(null);
@@ -141,8 +143,11 @@ export function Admin() {
       <AdminHeader />
 
       <div className="flex">
-        <AdminSidebar activeSection="projects" />
+        <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
+        {activeSection === 'settings' ? (
+          <SettingsPanel />
+        ) : (
         <div className="flex-1 p-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Project Groups</h2>
@@ -269,6 +274,7 @@ export function Admin() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       <Modal
