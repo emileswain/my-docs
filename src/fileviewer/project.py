@@ -189,45 +189,32 @@ class ProjectManager:
 
     def _migrate_from_v1(self, projects_data: List[Dict]) -> None:
         """Migrate flat projects into groups based on path patterns."""
-        # Build path-based grouping rules
+        # Build path-based grouping rules.
+        #
+        # Each entry maps a path fragment to a group name, and optionally
+        # overrides the inferred project type based on directory names.
+        # These are illustrative defaults — adjust the fragments and group
+        # names to match your own workspace layout.
         grouping = {
-            'Alpha': {
-                'paths': ['/Work/alpha/'],
+            'Work': {
+                'paths': ['/Work/'],
                 'type_overrides': {
-                    'alpha_device': 'firmware',
-                    'alpha_mobile': 'mobile',
-                    'alpha_studio': 'web',
-                    'alpha_services': 'services',
-                    'alpha_docs': 'docs',
-                    'aiworkflow': 'cloud',
-                    'workspace_alpha': 'workspace',
-                    'combine_will': 'testing',
+                    'device': 'firmware',
+                    'mobile': 'mobile',
+                    'studio': 'web',
+                    'services': 'services',
+                    'docs': 'docs',
+                    'workflow': 'cloud',
+                    'workspace': 'workspace',
+                    'tests': 'testing',
                 },
             },
-            'Beta': {
-                'paths': ['/Work/beta/'],
-                'type_overrides': {
-                    'platform-docs': 'docs',
-                    'platform': 'services',
-                    'results': 'testing',
-                },
-            },
-            'Gamma': {
-                'paths': ['/Work/example-workspace/'],
-                'type_overrides': {
-                    'scripts': 'services',
-                    'workspace_alpha': 'workspace',
-                },
-            },
-            'Emile': {
-                'paths': ['/Work/emile/'],
+            'Personal': {
+                'paths': ['/personal/'],
                 'type_overrides': {
                     'my-docs': 'docs',
-                    'Haystack': 'desktop',
-                    'meta-code': 'desktop',
-                    'blender-3dprintkit': 'design',
-                    'datocms-white-label': 'web',
-                    'workspace_llm': 'cloud',
+                    'desktop-app': 'desktop',
+                    'design-kit': 'design',
                 },
             },
             'System': {

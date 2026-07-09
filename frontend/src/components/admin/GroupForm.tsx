@@ -38,7 +38,7 @@ export function GroupForm({ group, onSubmit, onCancel }: GroupFormProps) {
             color: 'var(--text-primary)',
             borderColor: 'var(--border-focus)',
           }}
-          placeholder="e.g., Alpha, Beta, Personal"
+          placeholder="e.g., Work, Personal, Open Source"
         />
       </div>
       <div className="flex justify-end space-x-3 pt-4">

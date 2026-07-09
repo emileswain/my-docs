@@ -1,15 +1,14 @@
 # Doc Viewer
 
-A project based document viewer to access markdown, json, yml files related to your projects on your file system.
+A project-based document viewer for browsing the Markdown, JSON, and YAML files across your projects on your file system.
 
-Simple reaactdom frontend for file navigation and viewing. 
-Python backend to access filesystem and possibly entertain llm integration.
-
+A simple React frontend handles file navigation and viewing, backed by a Python (Flask) server that reads the filesystem and leaves room for future LLM integration.
 
 ## Why
-I was using mkdocs to review markdown files, but needed some extra functionality, like being able to review multiple project docs without having to launch multiple servers etc. So i got claude to write this for me. 
 
-It started off like it was writing code in notepad++. I mean it worked, but also it was putting nearly everything in one massive file. So i tamed it a bit.
+I was using MkDocs to review Markdown files but needed some extra functionality — chiefly, being able to review docs across multiple projects without spinning up a separate server for each. So I got Claude to write this for me.
+
+It started out cramming nearly everything into one massive file. It worked, but it needed taming — so the codebase is now organised around a clean separation of concerns (see [Architecture](#architecture) below).
 
 ## Documentation
 

@@ -43,6 +43,9 @@ Thumbs.db
 # Project specific
 watched_folders.json
 
+# Accidentally-committed browser/app state
+Local State.json
+
 # Node/npm
 node_modules/
 package-lock.json
