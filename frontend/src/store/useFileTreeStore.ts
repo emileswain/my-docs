@@ -5,6 +5,8 @@ export interface FileTreeCache {
   cache: Map<string, FileItem[]>;
   rootItems: FileItem[];
   lastUpdated: number;
+  /** True once the full tree has hydrated in the background (search-ready). */
+  hydrated?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export interface FileTreeCache {
 interface FileTreeState {
   fileTreeCache: Record<string, FileTreeCache>;
   setFileTreeCache: (projectId: string, data: FileTreeCache) => void;
+  mergeFolderItems: (projectId: string, folderPath: string, items: FileItem[]) => void;
   clearCache: (projectId: string) => void;
   getCache: (projectId: string) => FileTreeCache | undefined;
 }
@@ -44,6 +47,21 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
   setFileTreeCache: (projectId, data) => set((state) => ({
     fileTreeCache: { ...state.fileTreeCache, [projectId]: data }
   })),
+
+  // Splice a single folder's contents into the cache (for lazy expand). Clones
+  // the Map so React sees a new reference and re-renders.
+  mergeFolderItems: (projectId, folderPath, items) => set((state) => {
+    const existing = state.fileTreeCache[projectId];
+    if (!existing) return {};
+    const cache = new Map(existing.cache);
+    cache.set(folderPath, items);
+    return {
+      fileTreeCache: {
+        ...state.fileTreeCache,
+        [projectId]: { ...existing, cache },
+      },
+    };
+  }),
 
   clearCache: (projectId) => set((state) => {
     const newCache = { ...state.fileTreeCache };
