@@ -56,3 +56,7 @@ src/fileviewer/static/output.css
 # React build output
 src/fileviewer/static/dist/
 frontend/dist/
+
+# Tauri / node
+node_modules/
+frontend/dist/

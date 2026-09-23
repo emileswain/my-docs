@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import type { FileItem, FileContent } from '../types';
 
 export interface BrowseResponse {
@@ -27,29 +28,14 @@ export class FileService {
     projectId: string,
     path?: string
   ): Promise<BrowseResponse> {
-    const url = path
-      ? `/api/projects/${projectId}/browse/${path}`
-      : `/api/projects/${projectId}/browse`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to browse project');
-    }
-
-    return response.json();
+    // Ported to the Rust engine (invoke replaces GET /browse).
+    return invoke<BrowseResponse>('browse_project', { projectId, subpath: path });
   }
 
   async fetchFileContent(path: string): Promise<FileContent> {
-    const encodedPath = path.startsWith('/') ? path.substring(1) : path;
-    const response = await fetch(`/api/file/${encodedPath}`);
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch file content');
-    }
-
-    return response.json();
+    // Ported to the Rust engine (invoke replaces GET /file). The absolute path
+    // is passed as-is; no URL encoding needed over IPC.
+    return invoke<FileContent>('get_file', { path });
   }
 
   async saveFile(path: string, content: string): Promise<void> {
@@ -73,16 +59,12 @@ export class FileService {
   async browseAllFolders(
     projectId: string
   ): Promise<{ cache: Map<string, FileItem[]>; rootItems: FileItem[] }> {
-    const url = `/api/projects/${projectId}/browse-all`;
-
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to browse all folders');
-      }
-
-      const data = await response.json();
+      // Ported to the Rust engine (invoke replaces GET /browse-all).
+      const data = await invoke<{ cache: Record<string, FileItem[]>; rootItems: FileItem[] }>(
+        'browse_all',
+        { projectId }
+      );
 
       // Convert cache object to Map
       const cache = new Map<string, FileItem[]>();

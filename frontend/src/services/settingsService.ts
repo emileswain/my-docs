@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import type { Watch, WatchResult } from '../types';
 
 export interface AppSettings {
@@ -7,11 +8,8 @@ export interface AppSettings {
 
 export class SettingsService {
   async fetchSettings(): Promise<AppSettings> {
-    const response = await fetch('/api/settings');
-    if (!response.ok) {
-      throw new Error('Failed to fetch settings');
-    }
-    return response.json();
+    // Ported to the Rust engine: reads ~/.fileviewer/settings.json.
+    return invoke<AppSettings>('get_settings');
   }
 
   async updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
@@ -104,9 +102,8 @@ export class SettingsService {
   }
 
   async getWatchedFiles(projectId: string): Promise<WatchResult[]> {
-    const response = await fetch(`/api/projects/${projectId}/watched-files`);
-    if (!response.ok) throw new Error('Failed to fetch watched files');
-    const result = await response.json();
+    // Ported to the Rust engine (stub returns []; watch/glob resolution TODO).
+    const result = await invoke<{ watches: WatchResult[] }>('get_watched_files', { projectId });
     return result.watches;
   }
 }

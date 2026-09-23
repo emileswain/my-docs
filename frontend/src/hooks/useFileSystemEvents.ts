@@ -36,7 +36,8 @@ export function useFileSystemEvents(
 
     // Subscribe to events
     const unsubscribe = eventService.subscribe((event) => {
-      if (event.project_id === projectId) {
+      // '' = engine-level broadcast (project unknown); match any project.
+      if (event.project_id === projectId || event.project_id === '') {
         onEvent(event);
       }
     });

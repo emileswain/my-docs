@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import type { ProjectGroup, SubProject, SubprojectType } from '../types';
 
 export interface CreateGroupDto {
@@ -26,11 +27,8 @@ export class ProjectService {
   // --- Group operations ---
 
   async fetchGroups(): Promise<ProjectGroup[]> {
-    const response = await fetch('/api/groups');
-    if (!response.ok) {
-      throw new Error('Failed to fetch groups');
-    }
-    return response.json();
+    // Ported to the Rust engine: reads ~/.fileviewer/projects.json.
+    return invoke<ProjectGroup[]>('get_groups');
   }
 
   async createGroup(data: CreateGroupDto): Promise<ProjectGroup> {

@@ -1,0 +1,14 @@
+{
+  "name": "my-docs-rust",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Tauri desktop shell for my-docs, with a Rust file engine (Strategy C).",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build:tauri",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
