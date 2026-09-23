@@ -120,6 +120,21 @@ pub async fn get_file(path: String) -> Result<Value, String> {
     .await
 }
 
+// --- Document notes (ported from the /api/notes routes) ---
+
+/// GET /api/notes/:path -> the notes JSON (`{ notes: [...] }`).
+#[tauri::command]
+pub fn get_notes(file_path: String) -> Value {
+    store::get_notes(&file_path)
+}
+
+/// PUT /api/notes/:path -> `{ success: true }`.
+#[tauri::command]
+pub fn save_notes(file_path: String, notes: Value) -> Result<Value, String> {
+    store::save_notes(&file_path, notes)?;
+    Ok(json!({ "success": true }))
+}
+
 // --- Favourites (ported from the /api/favourites routes) ---
 
 /// GET /api/favourites -> `{ favourites: [...] }`.

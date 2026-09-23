@@ -191,18 +191,3 @@ pub fn list_dir(dir: &Path) -> std::io::Result<Vec<DirEntry>> {
     Ok(out)
 }
 
-/// Convenience wrapper used by the watcher for cache warming.
-pub fn stat_modified_ms(path: &Path) -> u64 {
-    std::fs::metadata(path)
-        .as_ref()
-        .map(modified_ms)
-        .unwrap_or(0)
-}
-
-#[allow(dead_code)]
-fn _now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
-}

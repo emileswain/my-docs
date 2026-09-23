@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
 import {
@@ -36,9 +37,8 @@ export function NotePanel({ contentAreaRef }: NotePanelProps) {
     if (projectId && currentFile) {
       const localNotes = getDocumentNotes(projectId, currentFile);
 
-      // Try loading from backend
-      fetch(`/api/notes/${currentFile.replace(/^\//, '')}`)
-        .then(r => r.json())
+      // Try loading from the Rust engine (was GET /api/notes/:path)
+      invoke<{ notes?: DocumentNote[] }>('get_notes', { filePath: currentFile })
         .then(data => {
           const backendNotes = data.notes || [];
           // Use whichever has more notes (simple merge strategy)
@@ -60,11 +60,9 @@ export function NotePanel({ contentAreaRef }: NotePanelProps) {
 
   const syncToBackend = useCallback((updatedNotes: DocumentNote[]) => {
     if (!currentFile) return;
-    fetch(`/api/notes/${currentFile.replace(/^\//, '')}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: updatedNotes }),
-    }).catch(() => { /* silent — localStorage is primary */ });
+    // Was PUT /api/notes/:path
+    invoke('save_notes', { filePath: currentFile, notes: updatedNotes })
+      .catch(() => { /* silent — localStorage is primary */ });
   }, [currentFile]);
 
   const handleAddNote = useCallback(() => {

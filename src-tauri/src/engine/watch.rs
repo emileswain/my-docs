@@ -77,10 +77,6 @@ impl Watcher {
         Ok(Self { debouncer, roots })
     }
 
-    pub fn roots(&self) -> &[PathBuf] {
-        &self.roots
-    }
-
     /// Add a new root to the live watch set.
     pub fn add_root(&mut self, root: &Path) -> anyhow::Result<()> {
         if root.exists() {

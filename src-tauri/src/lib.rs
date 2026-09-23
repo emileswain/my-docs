@@ -38,6 +38,8 @@ pub fn run() {
             commands::add_favourite,
             commands::remove_favourite,
             commands::get_favourite_files,
+            commands::get_notes,
+            commands::save_notes,
             // engine
             commands::list_dir,
             commands::read_file,

@@ -146,6 +146,32 @@ fn persist_favourites(list: &[String]) -> Result<(), String> {
     save_settings_object(map)
 }
 
+// --- Document notes (~/.fileviewer/notes/<sha256(path)[:16]>.json) ---
+
+fn note_file(file_path: &str) -> PathBuf {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(file_path.as_bytes());
+    // First 8 bytes -> 16 hex chars, matching the Python key.
+    let key: String = digest.iter().take(8).map(|b| format!("{b:02x}")).collect();
+    config_dir().join("notes").join(format!("{key}.json"))
+}
+
+/// Notes JSON for a document path, or `{ "notes": [] }` when none exist.
+pub fn get_notes(file_path: &str) -> Value {
+    read_json(note_file(file_path)).unwrap_or_else(|| json!({ "notes": [] }))
+}
+
+/// Persist notes for a document path. Stores `{ notes, file_path }`.
+pub fn save_notes(file_path: &str, notes: Value) -> Result<(), String> {
+    let path = note_file(file_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let payload = json!({ "notes": notes, "file_path": file_path });
+    let text = serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?;
+    std::fs::write(path, text).map_err(|e| e.to_string())
+}
+
 /// All project paths (for the "is this file inside a watched project?" check).
 pub fn all_project_paths() -> Vec<String> {
     let mut out = Vec::new();
