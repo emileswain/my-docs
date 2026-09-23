@@ -214,14 +214,102 @@ pub async fn get_favourite_files(project_id: String) -> Result<Value, String> {
     .await
 }
 
-/// GET /api/projects/:id/watched-files -> `{ watches: [...] }`.
+/// GET /api/projects/:id/watched-files -> `{ watches: [{ watch, files }] }`.
 ///
-/// TODO(port): implement watch/glob resolution from settings.json. Stubbed to
-/// empty for now so the panel stops calling the (removed) Flask server — the
-/// `ECONNREFUSED` spam and its jank on every project switch came from here.
+/// Resolves the project's active watches (global watches minus per-project
+/// disables plus per-project enables, then project-specific watches), then for
+/// each one lists the document files in its subfolder matching its glob
+/// pattern. Mirrors the Python get_watched_files.
 #[tauri::command]
-pub fn get_watched_files(_project_id: String) -> Value {
-    json!({ "watches": [] })
+pub async fn get_watched_files(project_id: String) -> Result<Value, String> {
+    use crate::engine::types::TEXT_EXTENSIONS;
+    use glob::{MatchOptions, Pattern};
+
+    run_blocking(move || {
+        let sub = store::subproject(&project_id).ok_or("Project not found")?;
+        let root = PathBuf::from(sub.get("path").and_then(|v| v.as_str()).ok_or("Project has no path")?);
+
+        // String set from a subproject array field (disabled_watches / enabled_watches).
+        let id_set = |key: &str| -> std::collections::HashSet<String> {
+            sub.get(key)
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default()
+        };
+        let disabled = id_set("disabled_watches");
+        let enabled_over = id_set("enabled_watches");
+
+        // Resolve active watches.
+        let mut active: Vec<Value> = Vec::new();
+        for gw in store::global_watches() {
+            let wid = gw.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            if disabled.contains(wid) {
+                continue;
+            }
+            let globally_on = gw.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+            if globally_on || enabled_over.contains(wid) {
+                active.push(gw);
+            }
+        }
+        if let Some(pws) = sub.get("watches").and_then(|v| v.as_array()) {
+            for pw in pws {
+                // Project watches default to enabled unless explicitly false.
+                if pw.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true) {
+                    active.push(pw.clone());
+                }
+            }
+        }
+
+        // Case-insensitive fnmatch, matching Python's fnmatch on macOS.
+        let opts = MatchOptions { case_sensitive: false, ..Default::default() };
+
+        let mut results = Vec::new();
+        for watch in active {
+            let subfolder = watch.get("subfolder").and_then(|v| v.as_str()).unwrap_or("");
+            let subfolder = subfolder.trim_matches('/');
+            let pattern = watch.get("pattern").and_then(|v| v.as_str()).unwrap_or("*");
+            let search = if subfolder.is_empty() { root.clone() } else { root.join(subfolder) };
+
+            let mut files: Vec<crate::engine::types::FileItem> = Vec::new();
+            if search.is_dir() {
+                let pat = Pattern::new(pattern).ok();
+                if let Ok(rd) = std::fs::read_dir(&search) {
+                    for entry in rd.flatten() {
+                        let path = entry.path();
+                        let Ok(meta) = entry.metadata() else { continue };
+                        if !meta.is_file() {
+                            continue;
+                        }
+                        let name = entry.file_name().to_string_lossy().to_string();
+                        let ext = path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .map(|e| format!(".{}", e.to_lowercase()))
+                            .unwrap_or_default();
+                        if !TEXT_EXTENSIONS.contains(&ext.as_str()) {
+                            continue;
+                        }
+                        let matches = pat.as_ref().map(|p| p.matches_with(&name, opts)).unwrap_or(false);
+                        if !matches {
+                            continue;
+                        }
+                        if let Some(item) = scan::file_item(&path) {
+                            files.push(item);
+                        }
+                    }
+                }
+                // Newest first.
+                files.sort_by(|a, b| {
+                    b.modified.partial_cmp(&a.modified).unwrap_or(std::cmp::Ordering::Equal)
+                });
+            }
+
+            results.push(json!({ "watch": watch, "files": files }));
+        }
+
+        Ok(json!({ "watches": results }))
+    })
+    .await
 }
 
 // ---------------------------------------------------------------------------

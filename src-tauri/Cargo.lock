@@ -2255,6 +2255,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dashmap",
+ "glob",
  "notify",
  "notify-debouncer-full",
  "pulldown-cmark",

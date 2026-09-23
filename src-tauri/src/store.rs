@@ -172,6 +172,31 @@ pub fn save_notes(file_path: &str, notes: Value) -> Result<(), String> {
     std::fs::write(path, text).map_err(|e| e.to_string())
 }
 
+/// The subproject JSON object for an id (or slug), searching all groups.
+pub fn subproject(identifier: &str) -> Option<Value> {
+    for group in groups() {
+        if let Some(subs) = group.get("subprojects").and_then(|s| s.as_array()) {
+            for sp in subs {
+                let id = sp.get("id").and_then(|v| v.as_str());
+                let slug = sp.get("slug").and_then(|v| v.as_str());
+                if id == Some(identifier) || slug == Some(identifier) {
+                    return Some(sp.clone());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Global watches from settings.json.
+pub fn global_watches() -> Vec<Value> {
+    settings()
+        .get("watches")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// All project paths (for the "is this file inside a watched project?" check).
 pub fn all_project_paths() -> Vec<String> {
     let mut out = Vec::new();

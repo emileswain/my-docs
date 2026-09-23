@@ -47,6 +47,7 @@ dashmap = "6"          # concurrent in-memory cache
 quick-xml = { version = "0.36", features = ["serialize"] }
 pulldown-cmark = "0.12"  # markdown
 sha2 = "0.10"            # note-file keys (sha256 of the document path)
+glob = "0.3"             # fnmatch-style patterns for watched-files
 
 # --- async / plumbing ---
 tokio = { version = "1", features = ["sync", "rt", "macros", "time"] }
