@@ -30,7 +30,10 @@ class FolderEventHandler(FileSystemEventHandler):
         if event.is_directory:
             is_relevant = True
         else:
-            is_relevant = event.src_path.endswith(('.md', '.json', '.yml', '.yaml', '.mmd', '.xml'))
+            is_relevant = event.src_path.lower().endswith((
+                '.md', '.json', '.yml', '.yaml', '.mmd', '.xml',
+                '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico', '.avif',
+            ))
 
         if is_relevant:
             print(f"{'Folder' if event.is_directory else 'File'} change detected: {event.event_type} - {event.src_path}")

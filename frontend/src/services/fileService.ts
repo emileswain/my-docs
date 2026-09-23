@@ -1,4 +1,10 @@
-import type { FileItem, FileContent } from '../types';
+import type { FileItem, FileContent, ImageFolder } from '../types';
+
+/** Build the URL that serves a raw image file. */
+export function imageUrl(path: string): string {
+  const encodedPath = path.startsWith('/') ? path.substring(1) : path;
+  return `/api/image/${encodedPath.split('/').map(encodeURIComponent).join('/')}`;
+}
 
 export interface BrowseResponse {
   items: FileItem[];
@@ -67,6 +73,15 @@ export class FileService {
       throw new Error(error.error || 'Failed to save file');
     }
 
+    return response.json();
+  }
+
+  async listFolderImages(folder: string): Promise<ImageFolder> {
+    const response = await fetch(`/api/images?folder=${encodeURIComponent(folder)}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to list images');
+    }
     return response.json();
   }
 

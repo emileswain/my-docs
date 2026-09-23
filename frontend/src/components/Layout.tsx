@@ -5,8 +5,12 @@ import { FileTree } from './FileTree';
 import { FileViewer } from './FileViewer';
 import { StructureTree } from './StructureTree';
 import { NotePanel } from './NotePanel';
+import { ImageMainView } from './ImageMainView';
+import { ImageListPanel } from './ImageListPanel';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
+import { useFavouritesStore } from '../store/useFavouritesStore';
+import { useImageViewerStore } from '../store/useImageViewerStore';
 import { useProjects } from '../hooks/useProjects';
 import { useFileContent } from '../hooks/useFileContent';
 import { loadOpenFoldersFromStorage } from '../store/useProjectStore';
@@ -33,11 +37,26 @@ export function Layout() {
   const setDarkMode = useAppStore((state) => state.setDarkMode);
   const notesPanelVisible = useAppStore((state) => state.notesPanelVisible);
   const notesPanelPosition = useAppStore((state) => state.notesPanelPosition);
+  const imageViewerFolder = useAppStore((state) => state.imageViewerFolder);
+  const setImageViewerFolder = useAppStore((state) => state.setImageViewerFolder);
+  const loadFavourites = useFavouritesStore((state) => state.loadFavourites);
+  const loadImageFolder = useImageViewerStore((state) => state.loadFolder);
+  const resetImageViewer = useImageViewerStore((state) => state.reset);
 
-  // Load groups on mount
+  // Load groups and favourites on mount
   useEffect(() => {
     loadGroups();
-  }, [loadGroups]);
+    loadFavourites();
+  }, [loadGroups, loadFavourites]);
+
+  // Load images whenever the selected image folder changes
+  useEffect(() => {
+    if (imageViewerFolder) {
+      loadImageFolder(imageViewerFolder.path);
+    } else {
+      resetImageViewer();
+    }
+  }, [imageViewerFolder, loadImageFolder, resetImageViewer]);
 
   // Handle group/sub-project selection from URL or localStorage
   useEffect(() => {
@@ -129,6 +148,7 @@ export function Layout() {
   const selectSubProject = (sub: SubProject, updateUrl = true, group?: ProjectGroup) => {
     setCurrentSubProject(sub);
     setIsSubDropdownOpen(false);
+    setImageViewerFolder(null);
 
     const openFolders = loadOpenFoldersFromStorage(sub.id);
     setOpenFolders(sub.id, openFolders);
@@ -199,19 +219,25 @@ export function Layout() {
       <div className="flex flex-1 overflow-hidden">
         <FileTree onFileSelect={handleFileSelect} />
 
-        {/* Center column — splits vertically when notes are at bottom */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <FileViewer
-            contentAreaRef={contentAreaRef}
-            onHistoryLoad={handleHistoryLoad}
-            onNavigate={handleFileSelect}
+        {/* Center column — image viewer, or the file viewer (which splits
+            vertically when notes are at bottom) */}
+        {imageViewerFolder ? (
+          <ImageMainView />
+        ) : (
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+            <FileViewer
+              contentAreaRef={contentAreaRef}
+              onHistoryLoad={handleHistoryLoad}
+              onNavigate={handleFileSelect}
+            />
+            {notesPanelVisible && notesPanelPosition === 'bottom' && notePanelElement}
+          </div>
+        )}
 
-          />
-          {notesPanelVisible && notesPanelPosition === 'bottom' && notePanelElement}
-        </div>
-
-        {/* Right side: structure tree or notes panel */}
-        {notesPanelVisible && notesPanelPosition === 'right' ? (
+        {/* Right side: image list, notes panel, or structure tree */}
+        {imageViewerFolder ? (
+          <ImageListPanel />
+        ) : notesPanelVisible && notesPanelPosition === 'right' ? (
           notePanelElement
         ) : (
           <StructureTree

@@ -13,6 +13,7 @@ DEFAULT_SETTINGS = {
         '.parcel-cache', '.turbo', 'obj', 'bin',
     ],
     'watches': [],
+    'favourites': [],
 }
 
 
@@ -84,3 +85,20 @@ class SettingsManager:
             self.set('watches', filtered)
             return True
         return False
+
+    def get_favourites(self) -> List[str]:
+        return self.get('favourites') or []
+
+    def add_favourite(self, path: str) -> List[str]:
+        favourites = self.get_favourites()
+        if path not in favourites:
+            favourites.append(path)
+            self.set('favourites', favourites)
+        return favourites
+
+    def remove_favourite(self, path: str) -> List[str]:
+        favourites = self.get_favourites()
+        filtered = [p for p in favourites if p != path]
+        if len(filtered) < len(favourites):
+            self.set('favourites', filtered)
+        return filtered

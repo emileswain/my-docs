@@ -1,4 +1,4 @@
-import type { Watch, WatchResult } from '../types';
+import type { Watch, WatchResult, FileItem } from '../types';
 
 export interface AppSettings {
   excluded_folders: string[];
@@ -108,6 +108,44 @@ export class SettingsService {
     if (!response.ok) throw new Error('Failed to fetch watched files');
     const result = await response.json();
     return result.watches;
+  }
+
+  // --- Favourites operations ---
+
+  async getFavourites(): Promise<string[]> {
+    const response = await fetch('/api/favourites');
+    if (!response.ok) throw new Error('Failed to fetch favourites');
+    const result = await response.json();
+    return result.favourites;
+  }
+
+  async addFavourite(path: string): Promise<string[]> {
+    const response = await fetch('/api/favourites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    if (!response.ok) throw new Error('Failed to add favourite');
+    const result = await response.json();
+    return result.favourites;
+  }
+
+  async removeFavourite(path: string): Promise<string[]> {
+    const response = await fetch('/api/favourites', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    if (!response.ok) throw new Error('Failed to remove favourite');
+    const result = await response.json();
+    return result.favourites;
+  }
+
+  async getFavouriteFiles(projectId: string): Promise<FileItem[]> {
+    const response = await fetch(`/api/projects/${projectId}/favourite-files`);
+    if (!response.ok) throw new Error('Failed to fetch favourite files');
+    const result = await response.json();
+    return result.files;
   }
 }
 

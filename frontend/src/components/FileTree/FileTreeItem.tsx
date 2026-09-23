@@ -1,5 +1,7 @@
 import type { FileItem } from '../../types';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useFavouritesStore } from '../../store/useFavouritesStore';
+import { useAppStore } from '../../store/useAppStore';
 
 interface FileTreeItemProps {
   item: FileItem;
@@ -19,6 +21,9 @@ export function FileTreeItem({
   filter
 }: FileTreeItemProps) {
   const currentFile = useProjectStore((state) => state.currentFile);
+  const isFavourite = useFavouritesStore((state) => state.favourites.includes(item.path));
+  const toggleFavourite = useFavouritesStore((state) => state.toggleFavourite);
+  const setImageViewerFolder = useAppStore((state) => state.setImageViewerFolder);
 
   const isOpen = openFolders.includes(item.path);
   const isSelected = item.type === 'file' && currentFile === item.path;
@@ -50,11 +55,24 @@ export function FileTreeItem({
     return (
       <div>
         <div
-          className="tree-item py-1 px-2 rounded cursor-pointer"
+          className="tree-item group flex items-center py-1 px-2 rounded cursor-pointer"
           onClick={handleToggle}
         >
           <i className={`fas ${folderIcon} mr-2`} style={{ color: 'var(--accent-primary)' }}></i>
-          <span style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+          <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+          {item.has_images && (
+            <button
+              className="p-0.5 ml-1 rounded flex-shrink-0 opacity-60 group-hover:opacity-100"
+              style={{ color: 'var(--accent-primary)' }}
+              title="View images"
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageViewerFolder({ path: item.path, name: item.name });
+              }}
+            >
+              <i className="fas fa-images text-xs" />
+            </button>
+          )}
         </div>
         {isOpen && (
           <div className="ml-4">
@@ -81,7 +99,7 @@ export function FileTreeItem({
   const icon = getFileIcon(item.extension || '');
   return (
     <div
-      className="tree-item py-1 px-2 rounded cursor-pointer"
+      className="tree-item group flex items-center py-1 px-2 rounded cursor-pointer"
       style={{
         backgroundColor: isSelected ? 'var(--accent-secondary)' : 'transparent',
         fontWeight: isSelected ? 600 : 400
@@ -92,7 +110,18 @@ export function FileTreeItem({
         className={`fas ${icon} mr-2`}
         style={{ color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
       ></i>
-      <span style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+      <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+      <button
+        className={`p-0.5 ml-1 rounded flex-shrink-0 transition-opacity ${isFavourite ? 'opacity-100' : 'opacity-0 group-hover:opacity-70'}`}
+        style={{ color: isFavourite ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}
+        title={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleFavourite(item.path);
+        }}
+      >
+        <i className={`${isFavourite ? 'fas' : 'far'} fa-star text-xs`} />
+      </button>
     </div>
   );
 }

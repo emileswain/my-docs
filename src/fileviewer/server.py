@@ -6,14 +6,33 @@ import json
 import queue
 from pathlib import Path
 
+import mimetypes
+
 import markdown
-from flask import Flask, jsonify, request, send_from_directory, Response, stream_with_context
+from flask import Flask, jsonify, request, send_from_directory, send_file, Response, stream_with_context
 from flask_cors import CORS
 
 from .watcher import FolderWatcher
 from .file_parser import FileParser
 from .project import ProjectManager
 from .settings import SettingsManager
+
+# File extensions rendered as documents in the tree/watches.
+TEXT_EXTENSIONS = ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']
+
+# Image extensions surfaced via the folder image viewer.
+IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico', '.avif']
+
+
+def folder_has_images(folder_path):
+    """Return True if the folder directly contains at least one image file."""
+    try:
+        for item in folder_path.iterdir():
+            if item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
+                return True
+    except (PermissionError, OSError):
+        pass
+    return False
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for development
@@ -444,7 +463,7 @@ def get_watched_files(project_id):
                 if item.is_dir() and item.name in excluded:
                     continue
                 if item.is_file():
-                    if item.suffix.lower() not in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
+                    if item.suffix.lower() not in TEXT_EXTENSIONS:
                         continue
                     if fnmatch.fnmatch(item.name, pattern):
                         stat = item.stat()
@@ -619,6 +638,143 @@ def save_notes(file_path):
     return jsonify({'success': True})
 
 
+# --- Favourites endpoints ---
+
+@app.route('/api/favourites', methods=['GET'])
+def get_favourites():
+    """Get the list of favourited file paths."""
+    sm = app.config['settings_manager']
+    return jsonify({'favourites': sm.get_favourites()})
+
+
+@app.route('/api/favourites', methods=['POST'])
+def add_favourite():
+    """Add a file path to favourites."""
+    data = request.json or {}
+    path = data.get('path')
+    if not path:
+        return jsonify({'error': 'No path provided'}), 400
+    sm = app.config['settings_manager']
+    favourites = sm.add_favourite(path)
+    return jsonify({'success': True, 'favourites': favourites})
+
+
+@app.route('/api/favourites', methods=['DELETE'])
+def remove_favourite():
+    """Remove a file path from favourites."""
+    data = request.json or {}
+    path = data.get('path')
+    if not path:
+        return jsonify({'error': 'No path provided'}), 400
+    sm = app.config['settings_manager']
+    favourites = sm.remove_favourite(path)
+    return jsonify({'success': True, 'favourites': favourites})
+
+
+@app.route('/api/projects/<project_id>/favourite-files', methods=['GET'])
+def get_favourite_files(project_id):
+    """Resolve favourited paths that live under a project into file items."""
+    pm = app.config['project_manager']
+    sm = app.config['settings_manager']
+
+    project = pm.get_project(project_id)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    project_root = str(Path(project.path))
+    files = []
+    for path in sm.get_favourites():
+        if not (path == project_root or path.startswith(project_root + os.sep)):
+            continue
+        item = Path(path)
+        if not item.is_file():
+            continue
+        try:
+            stat = item.stat()
+        except (PermissionError, OSError):
+            continue
+        files.append({
+            'name': item.name,
+            'path': str(item),
+            'type': 'file',
+            'extension': item.suffix.lower(),
+            'modified': stat.st_mtime,
+            'created': stat.st_birthtime if hasattr(stat, 'st_birthtime') else stat.st_ctime,
+        })
+
+    files.sort(key=lambda x: x['modified'], reverse=True)
+    return jsonify({'files': files})
+
+
+# --- Image endpoints ---
+
+@app.route('/api/images', methods=['GET'])
+def list_folder_images():
+    """List image files contained directly in a folder."""
+    folder = request.args.get('folder')
+    if not folder:
+        return jsonify({'error': 'No folder provided'}), 400
+
+    pm = app.config['project_manager']
+    is_watched = any(
+        folder == project.path or folder.startswith(project.path + os.sep)
+        for project in pm.get_all_projects()
+    )
+    if not is_watched:
+        return jsonify({'error': 'Folder not in watched project'}), 403
+
+    folder_path = Path(folder)
+    if not folder_path.is_dir():
+        return jsonify({'error': 'Folder not found'}), 404
+
+    images = []
+    try:
+        for item in folder_path.iterdir():
+            if item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
+                try:
+                    stat = item.stat()
+                except (PermissionError, OSError):
+                    continue
+                images.append({
+                    'name': item.name,
+                    'path': str(item),
+                    'extension': item.suffix.lower(),
+                    'modified': stat.st_mtime,
+                })
+    except (PermissionError, OSError):
+        pass
+
+    images.sort(key=lambda x: x['name'].lower())
+    return jsonify({
+        'folder': str(folder_path),
+        'name': folder_path.name,
+        'images': images,
+    })
+
+
+@app.route('/api/image/<path:file_path>', methods=['GET'])
+def serve_image(file_path):
+    """Serve a raw image file from a watched project."""
+    file_path = '/' + file_path
+
+    pm = app.config['project_manager']
+    is_watched = any(
+        file_path.startswith(project.path)
+        for project in pm.get_all_projects()
+    )
+    if not is_watched:
+        return jsonify({'error': 'File not in watched project'}), 403
+
+    item = Path(file_path)
+    if not item.is_file() or item.suffix.lower() not in IMAGE_EXTENSIONS:
+        return jsonify({'error': 'Image not found'}), 404
+
+    mimetype = mimetypes.guess_type(file_path)[0]
+    if item.suffix.lower() == '.svg':
+        mimetype = 'image/svg+xml'
+    return send_file(file_path, mimetype=mimetype)
+
+
 def restart_all_watchers():
     """Restart all file watchers with current settings."""
     pm = app.config['project_manager']
@@ -754,7 +910,7 @@ def browse_all_folders(project_identifier):
                         continue
 
                     if item.is_file():
-                        if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
+                        if item.suffix.lower() in TEXT_EXTENSIONS:
                             stat = item.stat()
                             items.append({
                                 'name': item.name,
@@ -769,6 +925,7 @@ def browse_all_folders(project_identifier):
                             'name': item.name,
                             'path': str(item),
                             'type': 'folder',
+                            'has_images': folder_has_images(item),
                         })
                         scan_folder(item)
             except (PermissionError, OSError) as e:
@@ -812,7 +969,7 @@ def browse_project(project_identifier, subpath=''):
             if item.is_dir() and item.name in excluded_folders:
                 continue
             if item.is_file():
-                if item.suffix.lower() in ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml']:
+                if item.suffix.lower() in TEXT_EXTENSIONS:
                     stat = item.stat()
                     items.append({
                         'name': item.name,
@@ -827,6 +984,7 @@ def browse_project(project_identifier, subpath=''):
                     'name': item.name,
                     'path': str(item),
                     'type': 'folder',
+                    'has_images': folder_has_images(item),
                 })
 
         folders = sorted([i for i in items if i['type'] == 'folder'], key=lambda x: x['name'].lower())
