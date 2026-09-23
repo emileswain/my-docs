@@ -84,12 +84,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   }, [currentFile, currentProject, filter]);
 
   const expandToCurrentFile = useCallback(() => {
-    if (!currentProject || !currentFile) {
-      if (currentProject) {
-        setOpenFolders([]);
-      }
-      return;
-    }
+    if (!currentProject || !currentFile) return;
 
     // Get all parent folders of the current file
     const pathParts = currentFile.split('/').filter(p => p);
@@ -102,8 +97,10 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
       foldersToOpen.push(currentPath);
     }
 
-    setOpenFolders(foldersToOpen);
-  }, [currentProject, currentFile, setOpenFolders]);
+    // Merge with what's already open — switching files/projects should reveal
+    // the current file's path WITHOUT collapsing folders the user opened.
+    setOpenFolders(Array.from(new Set([...openFolders, ...foldersToOpen])));
+  }, [currentProject, currentFile, openFolders, setOpenFolders]);
 
   const handleToggleExpand = () => {
     if (!currentProject || !treeData) return;
