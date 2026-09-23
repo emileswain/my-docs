@@ -5,6 +5,7 @@ import { useFileTree } from '../../hooks/useFileTree';
 import { useFileSystemEvents } from '../../hooks/useFileSystemEvents';
 import { FileTreeItem } from './FileTreeItem';
 import { WatchedFiles } from './WatchedFiles';
+import { FavouriteFiles } from './FavouriteFiles';
 
 interface FileTreeProps {
   onFileSelect: (path: string, name: string) => void;
@@ -299,6 +300,9 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
         </button>
       </div>
       <div className="text-sm flex-1 overflow-y-auto">
+        {/* Favourites section */}
+        {currentProject && <FavouriteFiles onFileSelect={onFileSelect} />}
+
         {/* Watched files section */}
         {currentProject && <WatchedFiles onFileSelect={onFileSelect} />}
 

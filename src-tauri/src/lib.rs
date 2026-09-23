@@ -34,6 +34,10 @@ pub fn run() {
             commands::browse_all,
             commands::get_file,
             commands::get_watched_files,
+            commands::get_favourites,
+            commands::add_favourite,
+            commands::remove_favourite,
+            commands::get_favourite_files,
             // engine
             commands::list_dir,
             commands::read_file,

@@ -120,6 +120,59 @@ pub async fn get_file(path: String) -> Result<Value, String> {
     .await
 }
 
+// --- Favourites (ported from the /api/favourites routes) ---
+
+/// GET /api/favourites -> `{ favourites: [...] }`.
+#[tauri::command]
+pub fn get_favourites() -> Value {
+    json!({ "favourites": store::favourites() })
+}
+
+/// POST /api/favourites -> `{ success, favourites }`.
+#[tauri::command]
+pub fn add_favourite(path: String) -> Result<Value, String> {
+    let favourites = store::add_favourite(&path)?;
+    Ok(json!({ "success": true, "favourites": favourites }))
+}
+
+/// DELETE /api/favourites -> `{ success, favourites }`.
+#[tauri::command]
+pub fn remove_favourite(path: String) -> Result<Value, String> {
+    let favourites = store::remove_favourite(&path)?;
+    Ok(json!({ "success": true, "favourites": favourites }))
+}
+
+/// GET /api/projects/:id/favourite-files -> `{ files: [...] }`.
+/// Resolves favourited paths that live under the project into file items.
+#[tauri::command]
+pub async fn get_favourite_files(project_id: String) -> Result<Value, String> {
+    run_blocking(move || {
+        let root = store::project_path(&project_id).ok_or("Project not found")?;
+        let root_str = root.to_string_lossy().to_string();
+        let sep = std::path::MAIN_SEPARATOR;
+
+        let mut items = Vec::new();
+        for path in store::favourites() {
+            let under = path == root_str || path.starts_with(&format!("{root_str}{sep}"));
+            if !under {
+                continue;
+            }
+            match scan::file_item(Path::new(&path)) {
+                Some(item) => items.push(item),
+                None => continue,
+            }
+        }
+        // Most recently modified first.
+        items.sort_by(|a, b| {
+            b.modified
+                .partial_cmp(&a.modified)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        Ok(json!({ "files": items }))
+    })
+    .await
+}
+
 /// GET /api/projects/:id/watched-files -> `{ watches: [...] }`.
 ///
 /// TODO(port): implement watch/glob resolution from settings.json. Stubbed to

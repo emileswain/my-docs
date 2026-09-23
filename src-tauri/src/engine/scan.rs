@@ -79,6 +79,24 @@ pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<Fil
     Ok(folders)
 }
 
+/// Build a `FileItem` for a single existing file (returns None for
+/// directories or unreadable paths). Used by the favourites resolver.
+pub fn file_item(path: &Path) -> Option<FileItem> {
+    let meta = std::fs::metadata(path).ok()?;
+    if !meta.is_file() {
+        return None;
+    }
+    let name = path.file_name()?.to_string_lossy().to_string();
+    Some(FileItem {
+        name,
+        path: path.to_string_lossy().to_string(),
+        kind: "file".into(),
+        extension: Some(extension_of(path)),
+        modified: Some(secs(meta.modified())),
+        created: Some(secs(meta.created())),
+    })
+}
+
 /// Recursive browse: returns (cache keyed by folder path, root items).
 /// Mirrors `browse_all_folders`.
 pub fn browse_all(

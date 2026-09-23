@@ -88,6 +88,64 @@ pub fn project_path(identifier: &str) -> Option<PathBuf> {
     None
 }
 
+// --- Favourites (read + write settings.json) ---
+
+fn settings_path() -> PathBuf {
+    config_dir().join("settings.json")
+}
+
+/// Load settings.json as a mutable object (empty object if missing/invalid).
+fn load_settings_object() -> serde_json::Map<String, Value> {
+    read_json(settings_path())
+        .and_then(|v| v.as_object().cloned())
+        .unwrap_or_default()
+}
+
+/// Write the settings object back, pretty-printed (2-space, matching Python's
+/// json.dump(indent=2)). Creates ~/.fileviewer if needed.
+fn save_settings_object(map: serde_json::Map<String, Value>) -> Result<(), String> {
+    let dir = config_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let text = serde_json::to_string_pretty(&Value::Object(map)).map_err(|e| e.to_string())?;
+    std::fs::write(settings_path(), text).map_err(|e| e.to_string())
+}
+
+/// The favourited file paths from settings.json.
+pub fn favourites() -> Vec<String> {
+    settings()
+        .get("favourites")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+        .unwrap_or_default()
+}
+
+/// Add a path to favourites (idempotent); returns the new list.
+pub fn add_favourite(path: &str) -> Result<Vec<String>, String> {
+    let mut list = favourites();
+    if !list.iter().any(|p| p == path) {
+        list.push(path.to_string());
+        persist_favourites(&list)?;
+    }
+    Ok(list)
+}
+
+/// Remove a path from favourites; returns the new list.
+pub fn remove_favourite(path: &str) -> Result<Vec<String>, String> {
+    let mut list = favourites();
+    let before = list.len();
+    list.retain(|p| p != path);
+    if list.len() != before {
+        persist_favourites(&list)?;
+    }
+    Ok(list)
+}
+
+fn persist_favourites(list: &[String]) -> Result<(), String> {
+    let mut map = load_settings_object();
+    map.insert("favourites".into(), json!(list));
+    save_settings_object(map)
+}
+
 /// All project paths (for the "is this file inside a watched project?" check).
 pub fn all_project_paths() -> Vec<String> {
     let mut out = Vec::new();

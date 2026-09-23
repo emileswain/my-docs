@@ -7,6 +7,7 @@ import { StructureTree } from './StructureTree';
 import { NotePanel } from './NotePanel';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
+import { useFavouritesStore } from '../store/useFavouritesStore';
 import { useProjects } from '../hooks/useProjects';
 import { useFileContent } from '../hooks/useFileContent';
 import { loadOpenFoldersFromStorage } from '../store/useProjectStore';
@@ -33,11 +34,13 @@ export function Layout() {
   const setDarkMode = useAppStore((state) => state.setDarkMode);
   const notesPanelVisible = useAppStore((state) => state.notesPanelVisible);
   const notesPanelPosition = useAppStore((state) => state.notesPanelPosition);
+  const loadFavourites = useFavouritesStore((state) => state.loadFavourites);
 
-  // Load groups on mount
+  // Load groups and favourites on mount
   useEffect(() => {
     loadGroups();
-  }, [loadGroups]);
+    loadFavourites();
+  }, [loadGroups, loadFavourites]);
 
   // Handle group/sub-project selection from URL or localStorage
   useEffect(() => {

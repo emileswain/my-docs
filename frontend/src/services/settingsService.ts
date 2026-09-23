@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Watch, WatchResult } from '../types';
+import type { Watch, WatchResult, FileItem } from '../types';
 
 export interface AppSettings {
   excluded_folders: string[];
@@ -105,6 +105,28 @@ export class SettingsService {
     // Ported to the Rust engine (stub returns []; watch/glob resolution TODO).
     const result = await invoke<{ watches: WatchResult[] }>('get_watched_files', { projectId });
     return result.watches;
+  }
+
+  // --- Favourites operations (ported to the Rust engine) ---
+
+  async getFavourites(): Promise<string[]> {
+    const result = await invoke<{ favourites: string[] }>('get_favourites');
+    return result.favourites;
+  }
+
+  async addFavourite(path: string): Promise<string[]> {
+    const result = await invoke<{ favourites: string[] }>('add_favourite', { path });
+    return result.favourites;
+  }
+
+  async removeFavourite(path: string): Promise<string[]> {
+    const result = await invoke<{ favourites: string[] }>('remove_favourite', { path });
+    return result.favourites;
+  }
+
+  async getFavouriteFiles(projectId: string): Promise<FileItem[]> {
+    const result = await invoke<{ files: FileItem[] }>('get_favourite_files', { projectId });
+    return result.files;
   }
 }
 
