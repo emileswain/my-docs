@@ -1,5 +1,6 @@
 //! Process-wide engine state, managed by Tauri and injected into commands.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -9,6 +10,11 @@ use tauri::AppHandle;
 use crate::engine::cache::ScanCache;
 use crate::engine::types::EngineStatus;
 use crate::engine::watch::Watcher;
+
+/// Current excluded-folder set from settings.json, for the watcher to ignore.
+fn excluded() -> HashSet<String> {
+    crate::store::excluded_folders()
+}
 
 pub struct AppState {
     pub cache: Arc<ScanCache>,
@@ -35,7 +41,7 @@ impl AppState {
     pub fn restart(&self, app: &AppHandle) -> anyhow::Result<()> {
         self.cache.clear();
         let roots = self.roots.lock().unwrap().clone();
-        let watcher = Watcher::start(app.clone(), self.cache.clone(), roots)?;
+        let watcher = Watcher::start(app.clone(), self.cache.clone(), roots, excluded())?;
         *self.watcher.lock().unwrap() = Some(watcher);
         *self.started_at.lock().unwrap() = Instant::now();
         Ok(())
@@ -56,7 +62,7 @@ impl AppState {
         }
         self.cache.clear();
         *self.roots.lock().unwrap() = vec![root.clone()];
-        let watcher = Watcher::start(app.clone(), self.cache.clone(), vec![root])?;
+        let watcher = Watcher::start(app.clone(), self.cache.clone(), vec![root], excluded())?;
         *self.watcher.lock().unwrap() = Some(watcher);
         *self.started_at.lock().unwrap() = Instant::now();
         Ok(())
@@ -75,7 +81,7 @@ impl AppState {
             Some(w) => w.add_root(&root)?,
             None => {
                 let roots = self.roots.lock().unwrap().clone();
-                *guard = Some(Watcher::start(app.clone(), self.cache.clone(), roots)?);
+                *guard = Some(Watcher::start(app.clone(), self.cache.clone(), roots, excluded())?);
             }
         }
         Ok(())

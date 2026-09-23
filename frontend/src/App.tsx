@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { Layout } from './components/Layout';
 import { Admin } from './components/Admin';
 import { useAppStore } from './store/useAppStore';
@@ -14,6 +15,21 @@ function App() {
       document.documentElement.removeAttribute('data-theme');
     }
   }, [darkMode]);
+
+  // Open http(s) links (e.g. inside rendered documents) in the system browser
+  // instead of navigating the webview away from the app.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement | null)?.closest('a');
+      const href = anchor?.getAttribute('href');
+      if (href && /^https?:\/\//i.test(href)) {
+        e.preventDefault();
+        openUrl(href).catch((err) => console.error('Failed to open link:', err));
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
 
   return (
     <BrowserRouter>

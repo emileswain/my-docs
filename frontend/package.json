@@ -12,8 +12,9 @@
   },
   "dependencies": {
     "@microlink/react-json-view": "^1.27.0",
-    "@tauri-apps/api": "^2",
     "@tailwindcss/vite": "^4.1.14",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2.5.5",
     "@types/svg-pan-zoom": "^3.3.0",
     "js-yaml": "^4.1.0",
     "mermaid": "^11.12.0",

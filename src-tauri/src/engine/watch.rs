@@ -6,6 +6,7 @@
 //! `listen('fs-change', ...)` instead of subscribing to an EventSource — same
 //! push model, no HTTP.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,6 +24,16 @@ pub struct FsChange {
     pub paths: Vec<String>,
 }
 
+/// True if any component of `path` is an excluded folder name.
+fn path_is_excluded(path: &Path, excluded: &HashSet<String>) -> bool {
+    path.components().any(|c| {
+        c.as_os_str()
+            .to_str()
+            .map(|s| excluded.contains(s))
+            .unwrap_or(false)
+    })
+}
+
 /// Owns the live watcher. Dropping it stops watching.
 pub struct Watcher {
     debouncer: Debouncer<notify::RecommendedWatcher, FileIdMap>,
@@ -31,10 +42,16 @@ pub struct Watcher {
 
 impl Watcher {
     /// Start watching `roots` recursively, emitting `fs-change` on `app`.
+    ///
+    /// `excluded` is the set of folder names to ignore (node_modules, .git, …).
+    /// macOS FSEvents can't exclude subpaths from a recursive watch, so we drop
+    /// events whose path passes through an excluded folder here in Rust —
+    /// before any cache work or IPC to the frontend.
     pub fn start(
         app: AppHandle,
         cache: Arc<ScanCache>,
         roots: Vec<PathBuf>,
+        excluded: HashSet<String>,
     ) -> anyhow::Result<Self> {
         let cache_cb = cache.clone();
         let app_cb = app.clone();
@@ -47,12 +64,18 @@ impl Watcher {
                     let mut paths: Vec<String> = Vec::new();
                     for event in events {
                         for path in &event.paths {
+                            if path_is_excluded(path, &excluded) {
+                                continue;
+                            }
                             // Invalidate the changed file's parent folder listing.
                             if let Some(parent) = path.parent() {
                                 cache_cb.invalidate(&parent.to_string_lossy());
                             }
                             paths.push(path.to_string_lossy().to_string());
                         }
+                    }
+                    if paths.is_empty() {
+                        return; // everything was in an excluded folder
                     }
                     paths.sort();
                     paths.dedup();
