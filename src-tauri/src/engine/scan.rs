@@ -9,7 +9,47 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::engine::types::{DirEntry, FileItem, IMAGE_EXTENSIONS, TEXT_EXTENSIONS};
+use crate::engine::types::{DirEntry, FileItem, ImageItem, IMAGE_EXTENSIONS, TEXT_EXTENSIONS};
+
+/// True if `dir` directly contains at least one image file (non-recursive).
+pub fn folder_has_images(dir: &Path) -> bool {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in rd.flatten() {
+        let path = entry.path();
+        if path.is_file() && IMAGE_EXTENSIONS.contains(&extension_of(&path).as_str()) {
+            return true;
+        }
+    }
+    false
+}
+
+/// List image files directly inside `dir`, sorted by name (case-insensitive).
+pub fn list_images(dir: &Path) -> Vec<ImageItem> {
+    let mut images: Vec<ImageItem> = Vec::new();
+    if let Ok(rd) = std::fs::read_dir(dir) {
+        for entry in rd.flatten() {
+            let path = entry.path();
+            let Ok(meta) = entry.metadata() else { continue };
+            if !meta.is_file() {
+                continue;
+            }
+            let ext = extension_of(&path);
+            if !IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+                continue;
+            }
+            images.push(ImageItem {
+                name: entry.file_name().to_string_lossy().to_string(),
+                path: path.to_string_lossy().to_string(),
+                extension: Some(ext),
+                modified: Some(secs(meta.modified())),
+            });
+        }
+    }
+    images.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    images
+}
 
 /// Document extensions surfaced in the file tree (mirrors the Python browse
 /// routes, which only list these — not images).
@@ -52,6 +92,7 @@ pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<Fil
                 extension: None,
                 modified: None,
                 created: None,
+                has_images: Some(folder_has_images(&path)),
             });
         } else if meta.is_file() {
             let ext = extension_of(&path);
@@ -65,6 +106,7 @@ pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<Fil
                 extension: Some(ext),
                 modified: Some(secs(meta.modified())),
                 created: Some(secs(meta.created())),
+                has_images: None,
             });
         }
     }
@@ -94,6 +136,7 @@ pub fn file_item(path: &Path) -> Option<FileItem> {
         extension: Some(extension_of(path)),
         modified: Some(secs(meta.modified())),
         created: Some(secs(meta.created())),
+        has_images: None,
     })
 }
 

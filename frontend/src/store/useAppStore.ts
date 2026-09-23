@@ -54,6 +54,10 @@ interface AppState {
   notesPanelPosition: 'bottom' | 'right';
   setNotesPanelVisible: (visible: boolean) => void;
   setNotesPanelPosition: (position: 'bottom' | 'right') => void;
+
+  // Image viewer (right panel) - folder whose images are being viewed
+  imageViewerFolder: { path: string; name: string } | null;
+  setImageViewerFolder: (folder: { path: string; name: string } | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -100,4 +104,8 @@ export const useAppStore = create<AppState>((set) => ({
     set({ notesPanelPosition: position });
     localStorage.setItem('notesPanelPosition', position);
   },
+
+  // Image viewer (ephemeral - tied to current folder selection)
+  imageViewerFolder: null,
+  setImageViewerFolder: (folder) => set({ imageViewerFolder: folder }),
 }));

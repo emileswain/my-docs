@@ -48,6 +48,21 @@ export interface FileItem {
   type: 'file' | 'folder';
   extension?: string;
   modified?: number;
+  /** Folders only: true when the folder directly contains image files. */
+  has_images?: boolean;
+}
+
+export interface ImageItem {
+  name: string;
+  path: string;
+  extension?: string;
+  modified?: number;
+}
+
+export interface ImageFolder {
+  folder: string;
+  name: string;
+  images: ImageItem[];
 }
 
 export interface TreeNode {

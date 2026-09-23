@@ -48,6 +48,21 @@ pub struct FileItem {
     /// Created time in seconds since epoch.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created: Option<f64>,
+    /// For folders: whether it directly contains image files (drives the
+    /// "view images" button in the tree). None for files.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_images: Option<bool>,
+}
+
+/// An image file in a folder, for the folder image viewer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageItem {
+    pub name: String,
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extension: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified: Option<f64>,
 }
 
 /// A node in a parsed document tree (headings, json keys, xml elements, ...).

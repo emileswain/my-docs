@@ -59,6 +59,7 @@ pub fn run() {
             commands::browse_all,
             commands::get_file,
             commands::get_watched_files,
+            commands::list_folder_images,
             commands::get_favourites,
             commands::add_favourite,
             commands::remove_favourite,

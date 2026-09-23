@@ -120,6 +120,32 @@ pub async fn get_file(path: String) -> Result<Value, String> {
     .await
 }
 
+/// GET /api/images?folder=... -> `{ folder, name, images: [...] }`.
+/// Lists image files directly inside a folder (which must be within a project).
+#[tauri::command]
+pub async fn list_folder_images(folder: String) -> Result<Value, String> {
+    run_blocking(move || {
+        let sep = std::path::MAIN_SEPARATOR;
+        let inside = store::all_project_paths()
+            .iter()
+            .any(|p| folder == *p || folder.starts_with(&format!("{p}{sep}")));
+        if !inside {
+            return Err("Folder not in watched project".into());
+        }
+        let dir = Path::new(&folder);
+        if !dir.is_dir() {
+            return Err("Folder not found".into());
+        }
+        let name = dir
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let images = scan::list_images(dir);
+        Ok(json!({ "folder": folder, "name": name, "images": images }))
+    })
+    .await
+}
+
 // --- Document notes (ported from the /api/notes routes) ---
 
 /// GET /api/notes/:path -> the notes JSON (`{ notes: [...] }`).

@@ -1,8 +1,19 @@
-import { invoke } from '@tauri-apps/api/core';
-import type { FileItem, FileContent } from '../types';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import type { FileItem, FileContent, ImageFolder } from '../types';
 
 export interface BrowseResponse {
   items: FileItem[];
+}
+
+/**
+ * Build a URL the webview can load for a raw local image file.
+ *
+ * Uses Tauri's asset protocol (convertFileSrc) instead of an HTTP endpoint —
+ * the file is served directly from disk, no server. The path must be within
+ * the asset-protocol scope configured in tauri.conf.json.
+ */
+export function imageUrl(path: string): string {
+  return convertFileSrc(path);
 }
 
 /**
@@ -80,6 +91,11 @@ export class FileService {
       console.error('Error loading all folders:', error);
       throw error;
     }
+  }
+
+  async listFolderImages(folder: string): Promise<ImageFolder> {
+    // Ported to the Rust engine (invoke replaces GET /api/images).
+    return invoke<ImageFolder>('list_folder_images', { folder });
   }
 }
 

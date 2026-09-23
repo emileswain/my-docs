@@ -1,6 +1,7 @@
 import type { FileItem } from '../../types';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useFavouritesStore } from '../../store/useFavouritesStore';
+import { useAppStore } from '../../store/useAppStore';
 
 interface FileTreeItemProps {
   item: FileItem;
@@ -22,6 +23,7 @@ export function FileTreeItem({
   const currentFile = useProjectStore((state) => state.currentFile);
   const isFavourite = useFavouritesStore((state) => state.favourites.includes(item.path));
   const toggleFavourite = useFavouritesStore((state) => state.toggleFavourite);
+  const setImageViewerFolder = useAppStore((state) => state.setImageViewerFolder);
 
   const isOpen = openFolders.includes(item.path);
   const isSelected = item.type === 'file' && currentFile === item.path;
@@ -53,11 +55,24 @@ export function FileTreeItem({
     return (
       <div>
         <div
-          className="tree-item py-1 px-2 rounded cursor-pointer"
+          className="tree-item group flex items-center py-1 px-2 rounded cursor-pointer"
           onClick={handleToggle}
         >
           <i className={`fas ${folderIcon} mr-2`} style={{ color: 'var(--accent-primary)' }}></i>
-          <span style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+          <span className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+          {item.has_images && (
+            <button
+              className="p-0.5 ml-1 rounded flex-shrink-0 opacity-60 group-hover:opacity-100"
+              style={{ color: 'var(--accent-primary)' }}
+              title="View images"
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageViewerFolder({ path: item.path, name: item.name });
+              }}
+            >
+              <i className="fas fa-images text-xs" />
+            </button>
+          )}
         </div>
         {isOpen && (
           <div className="ml-4">
