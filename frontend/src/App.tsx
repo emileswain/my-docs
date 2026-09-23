@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Layout } from './components/Layout';
 import { Admin } from './components/Admin';
+import { DeepLinkHandler } from './components/DeepLinkHandler';
 import { useAppStore } from './store/useAppStore';
 import { useEffect } from 'react';
 
@@ -33,6 +34,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <DeepLinkHandler />
       <Routes>
         <Route path="/" element={<Layout />} />
         <Route path="/admin" element={<Admin />} />

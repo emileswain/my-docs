@@ -24,6 +24,7 @@ pub fn run() {
         // Restore window position/size/monitor from the last session so a dev
         // reload (or normal relaunch) reopens exactly where it was.
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
