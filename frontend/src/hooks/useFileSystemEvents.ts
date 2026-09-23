@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { eventService } from '../services/eventService';
 import type { FileSystemEvent } from '../services/eventService';
 
@@ -31,7 +32,12 @@ export function useFileSystemEvents(
   useEffect(() => {
     if (!projectId) return;
 
-    // Connect to SSE
+    // Point the Rust watcher at this project so live fs changes are emitted.
+    invoke('watch_project', { projectId }).catch((err) =>
+      console.error('Failed to watch project:', err)
+    );
+
+    // Subscribe to the engine's fs-change events
     eventService.connect();
 
     // Subscribe to events

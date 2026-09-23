@@ -44,6 +44,7 @@ pub fn run() {
             commands::list_dir,
             commands::read_file,
             commands::parse_file,
+            commands::watch_project,
             commands::add_watch_root,
             commands::engine_status,
             commands::restart_engine,

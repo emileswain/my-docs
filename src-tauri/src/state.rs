@@ -41,6 +41,27 @@ impl AppState {
         Ok(())
     }
 
+    /// Watch exactly one root (the currently-open project), replacing whatever
+    /// was watched before. Keeps the watch set small — we only need live events
+    /// for the project the user is looking at, mirroring the Python
+    /// per-project watcher. Clears the cache since the old roots are no longer
+    /// watched (and thus no longer invalidated).
+    pub fn watch_only(&self, app: &AppHandle, root: PathBuf) -> anyhow::Result<()> {
+        // No-op if we're already watching exactly this root.
+        {
+            let roots = self.roots.lock().unwrap();
+            if roots.len() == 1 && roots[0] == root {
+                return Ok(());
+            }
+        }
+        self.cache.clear();
+        *self.roots.lock().unwrap() = vec![root.clone()];
+        let watcher = Watcher::start(app.clone(), self.cache.clone(), vec![root])?;
+        *self.watcher.lock().unwrap() = Some(watcher);
+        *self.started_at.lock().unwrap() = Instant::now();
+        Ok(())
+    }
+
     pub fn add_root(&self, app: &AppHandle, root: PathBuf) -> anyhow::Result<()> {
         {
             let mut roots = self.roots.lock().unwrap();

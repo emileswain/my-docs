@@ -236,6 +236,20 @@ pub fn parse_file(path: String) -> Result<Vec<DocNode>, String> {
     Ok(parse::parse(&ext, &content))
 }
 
+/// Watch the given project's folder for live changes, replacing any previous
+/// watch. The frontend calls this when the open project changes; fs changes
+/// then arrive as `fs-change` events and refresh the tree.
+#[tauri::command]
+pub fn watch_project(
+    project_id: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<EngineStatus, String> {
+    let root = store::project_path(&project_id).ok_or("Project not found")?;
+    state.watch_only(&app, root).map_err(|e| e.to_string())?;
+    Ok(state.status())
+}
+
 /// Add a folder to the watch/serve set and start watching it.
 #[tauri::command]
 pub fn add_watch_root(
