@@ -66,8 +66,27 @@ fn secs(t: std::io::Result<SystemTime>) -> f64 {
 /// Folders sorted by name asc; files sorted by created-time desc — matching
 /// `browse_project` in the Python server.
 pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<FileItem>> {
+    let mut items = list_level(dir, excluded)?.0;
+    // Single-level browse: fill each child folder's has_images with its own scan.
+    for item in &mut items {
+        if item.kind == "folder" {
+            item.has_images = Some(folder_has_images(Path::new(&item.path)));
+        }
+    }
+    Ok(items)
+}
+
+/// One directory read: returns (sorted folder+doc-file items, whether this
+/// folder directly contains an image file). Folder items come back with
+/// `has_images = None`; callers fill it. Detecting images here means we never
+/// need a second `read_dir` per folder.
+fn list_level(
+    dir: &Path,
+    excluded: &HashSet<String>,
+) -> std::io::Result<(Vec<FileItem>, bool)> {
     let mut folders: Vec<FileItem> = Vec::new();
     let mut files: Vec<FileItem> = Vec::new();
+    let mut has_image_here = false;
 
     for entry in std::fs::read_dir(dir)? {
         let entry = match entry {
@@ -92,10 +111,13 @@ pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<Fil
                 extension: None,
                 modified: None,
                 created: None,
-                has_images: Some(folder_has_images(&path)),
+                has_images: None,
             });
         } else if meta.is_file() {
             let ext = extension_of(&path);
+            if IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+                has_image_here = true;
+            }
             if !DOC_EXTENSIONS.contains(&ext.as_str()) {
                 continue;
             }
@@ -118,7 +140,7 @@ pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<Fil
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     folders.extend(files);
-    Ok(folders)
+    Ok((folders, has_image_here))
 }
 
 /// Build a `FileItem` for a single existing file (returns None for
@@ -155,21 +177,23 @@ pub fn browse_all(
     (cache, root_items)
 }
 
+/// Scan `dir` and its subfolders into `cache`, returning whether `dir` directly
+/// contains images (used to set the parent's child has_images flag, matching
+/// the non-recursive image viewer). Each folder is read exactly once.
 fn scan_recursive(
     dir: &Path,
     excluded: &HashSet<String>,
     cache: &mut std::collections::HashMap<String, Vec<FileItem>>,
-) {
-    let items = match browse(dir, excluded) {
-        Ok(items) => items,
-        Err(_) => Vec::new(),
-    };
-    for item in &items {
+) -> bool {
+    let (mut items, has_images_here) = list_level(dir, excluded).unwrap_or((Vec::new(), false));
+    for item in &mut items {
         if item.kind == "folder" {
-            scan_recursive(Path::new(&item.path), excluded, cache);
+            let child_has = scan_recursive(Path::new(&item.path), excluded, cache);
+            item.has_images = Some(child_has);
         }
     }
     cache.insert(dir.to_string_lossy().to_string(), items);
+    has_images_here
 }
 
 fn modified_ms(meta: &std::fs::Metadata) -> u64 {
