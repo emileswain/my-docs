@@ -1,0 +1,28 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <!-- Five book-spine bars (matches the web header logo), bottom-aligned at y=780 -->
+  <!-- blue -->
+  <rect x="164" y="310" width="104" height="470" rx="18" fill="#60a5fa" stroke="#3b82f6" stroke-width="6"/>
+  <line x1="216" y1="336" x2="216" y2="756" stroke="#3b82f6" stroke-width="4" opacity="0.5"/>
+  <!-- green -->
+  <rect x="312" y="220" width="104" height="560" rx="18" fill="#34d399" stroke="#10b981" stroke-width="6"/>
+  <line x1="364" y1="246" x2="364" y2="756" stroke="#10b981" stroke-width="4" opacity="0.5"/>
+  <!-- yellow -->
+  <rect x="460" y="170" width="104" height="610" rx="18" fill="#fbbf24" stroke="#f59e0b" stroke-width="6"/>
+  <line x1="512" y1="196" x2="512" y2="756" stroke="#f59e0b" stroke-width="4" opacity="0.5"/>
+  <!-- red -->
+  <rect x="608" y="260" width="104" height="520" rx="18" fill="#f87171" stroke="#ef4444" stroke-width="6"/>
+  <line x1="660" y1="286" x2="660" y2="756" stroke="#ef4444" stroke-width="4" opacity="0.5"/>
+  <!-- purple -->
+  <rect x="756" y="190" width="104" height="590" rx="18" fill="#a78bfa" stroke="#8b5cf6" stroke-width="6"/>
+  <line x1="808" y1="216" x2="808" y2="756" stroke="#8b5cf6" stroke-width="4" opacity="0.5"/>
+</svg>
