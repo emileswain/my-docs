@@ -14,13 +14,37 @@ mod store;
 
 use std::time::Duration;
 
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default();
+
+    // Single-instance must be registered first: a second launch focuses the
+    // existing window instead of opening a new one, and forwards any mydocs://
+    // URL it was invoked with (this is how Windows/Linux deliver deep links to
+    // a running app — macOS delivers them via the OS).
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+            let urls: Vec<String> = argv
+                .into_iter()
+                .filter(|a| a.starts_with("mydocs://"))
+                .collect();
+            if !urls.is_empty() {
+                let _ = app.emit("deep-link-urls", urls);
+            }
+        }));
+    }
+
+    builder
         // Restore window position/size/monitor from the last session so a dev
         // reload (or normal relaunch) reopens exactly where it was.
         .plugin(tauri_plugin_window_state::Builder::default().build())

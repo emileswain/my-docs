@@ -30,6 +30,9 @@ tauri-plugin-opener = "2"
 tauri-plugin-window-state = "2"
 # Registers the mydocs:// URL scheme for deep links into documents.
 tauri-plugin-deep-link = "2"
+# Ensures a single running instance and forwards a second launch's args
+# (incl. deep-link URLs on Windows/Linux) to it.
+tauri-plugin-single-instance = "2"
 
 # --- serialization ---
 serde = { version = "1", features = ["derive"] }

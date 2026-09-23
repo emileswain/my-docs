@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onOpenUrl, getCurrent } from '@tauri-apps/plugin-deep-link';
+import { listen } from '@tauri-apps/api/event';
 
 /**
  * Handles `mydocs://<group>/<subproject>/<path>` deep links.
@@ -26,7 +27,8 @@ export function DeepLinkHandler() {
       navigate(`/${group}/${sub}${path ? `/${path}` : ''}`);
     };
 
-    let unlisten: (() => void) | undefined;
+    let unlistenOpen: (() => void) | undefined;
+    let unlistenForwarded: (() => void) | undefined;
 
     // URL the app was cold-started with (launched via the link).
     getCurrent()
@@ -35,14 +37,25 @@ export function DeepLinkHandler() {
       })
       .catch(() => {});
 
-    // URLs delivered while the app is already running.
+    // URLs delivered while the app is already running (macOS via the OS).
     onOpenUrl((urls) => urls.forEach(handle))
       .then((fn) => {
-        unlisten = fn;
+        unlistenOpen = fn;
       })
       .catch(() => {});
 
-    return () => unlisten?.();
+    // URLs forwarded by the single-instance plugin from a second launch's
+    // argv (Windows/Linux).
+    listen<string[]>('deep-link-urls', (e) => e.payload.forEach(handle))
+      .then((fn) => {
+        unlistenForwarded = fn;
+      })
+      .catch(() => {});
+
+    return () => {
+      unlistenOpen?.();
+      unlistenForwarded?.();
+    };
   }, [navigate]);
 
   return null;
