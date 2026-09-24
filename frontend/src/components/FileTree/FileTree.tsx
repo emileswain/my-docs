@@ -116,24 +116,42 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     }
   };
 
+  // The open-folder set from just before a search started, so clearing the
+  // filter restores what the user had open rather than collapsing everything.
+  const preSearchOpenFolders = useRef<string[] | null>(null);
+
+  const restorePreSearchFolders = useCallback(() => {
+    setOpenFolders(preSearchOpenFolders.current ?? []);
+    preSearchOpenFolders.current = null;
+    // The expandToCurrentFile effect (runs when filter clears) then merges the
+    // current file's path back in on top of the restored set.
+  }, [setOpenFolders]);
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFilter = e.target.value;
+
+    // Snapshot the open folders the first time a search begins.
+    if (newFilter && !filter) {
+      preSearchOpenFolders.current = openFolders;
+    }
+
     setFilter(newFilter);
 
     // Auto-expand folders containing matches when filtering
     if (newFilter && currentProject && treeData) {
       expandFoldersWithMatches(newFilter);
     } else if (!newFilter && currentProject) {
-      // Clear expanded folders when filter is cleared
-      setOpenFolders([]);
+      // Filter cleared — restore the pre-search open state.
+      restorePreSearchFolders();
     }
   };
 
   const clearFilter = () => {
     setFilter('');
     if (currentProject) {
-      // Expand to show current file location instead of collapsing all
-      expandToCurrentFile();
+      // Restore the pre-search open state (expandToCurrentFile then reveals the
+      // current file's path on top of it).
+      restorePreSearchFolders();
     }
   };
 
