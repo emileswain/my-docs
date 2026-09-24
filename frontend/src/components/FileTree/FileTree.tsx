@@ -18,7 +18,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   const [filter, setFilter] = useState('');
   const [allExpanded, setAllExpanded] = useState(false);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
-  const typeFilterActive = useFileFilterStore((s) => s.disabled.length > 0);
+  const typeFilterActive = useFileFilterStore((s) => s.isCustomised());
   const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const currentProject = useProjectStore((state) => state.currentProject);

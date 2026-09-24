@@ -37,10 +37,12 @@ export function imageUrl(path: string): string {
 export class FileService {
   async browseProject(
     projectId: string,
-    path?: string
+    path: string | undefined,
+    extensions: string[]
   ): Promise<BrowseResponse> {
-    // Ported to the Rust engine (invoke replaces GET /browse).
-    return invoke<BrowseResponse>('browse_project', { projectId, subpath: path });
+    // Ported to the Rust engine (invoke replaces GET /browse). `extensions` is
+    // the enabled file-type set; the backend only returns matching files.
+    return invoke<BrowseResponse>('browse_project', { projectId, subpath: path, extensions });
   }
 
   async fetchFileContent(path: string): Promise<FileContent> {
@@ -68,13 +70,14 @@ export class FileService {
   }
 
   async browseAllFolders(
-    projectId: string
+    projectId: string,
+    extensions: string[]
   ): Promise<{ cache: Map<string, FileItem[]>; rootItems: FileItem[] }> {
     try {
       // Ported to the Rust engine (invoke replaces GET /browse-all).
       const data = await invoke<{ cache: Record<string, FileItem[]>; rootItems: FileItem[] }>(
         'browse_all',
-        { projectId }
+        { projectId, extensions }
       );
 
       // Convert cache object to Map

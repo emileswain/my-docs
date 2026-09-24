@@ -2,26 +2,30 @@ import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
- * useFileFilterStore - which file types are shown in the file tree.
+ * useFileFilterStore - which file types the tree surfaces.
  *
- * Groups come from the Rust backend (the definitive list). We track a set of
- * DISABLED extensions (so anything new defaults to visible) plus user-added
- * custom types, both persisted to localStorage.
+ * Tracks an ENABLED set of extensions (the tree's backend browse only returns
+ * files whose extension is enabled). Defaults to the original document types;
+ * other types are opt-in. Groups come from the Rust backend; the user can add
+ * custom types. Enabled set + custom types persist to localStorage.
  */
 export interface FileTypeGroup {
   label: string;
   types: string[];
 }
 
-const DISABLED_KEY = 'fileFilter_disabled';
+/** The types shown by default (the tree's original behaviour). */
+export const DEFAULT_ENABLED = ['.md', '.json', '.yml', '.yaml', '.mmd', '.xml'];
+
+const ENABLED_KEY = 'fileFilter_enabled';
 const CUSTOM_KEY = 'fileFilter_custom';
 
-function load(key: string): string[] {
+function load(key: string, fallback: string[]): string[] {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
+    return raw ? JSON.parse(raw) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
@@ -42,22 +46,23 @@ export function normaliseExt(input: string): string {
 
 interface FileFilterState {
   groups: FileTypeGroup[];
-  disabled: string[];
+  enabled: string[];
   custom: string[];
   loaded: boolean;
   loadGroups: () => Promise<void>;
-  isDisabled: (ext: string) => boolean;
+  isEnabled: (ext: string) => boolean;
+  isCustomised: () => boolean;
   toggleType: (ext: string) => void;
   setGroup: (types: string[], enabled: boolean) => void;
   addCustom: (ext: string) => void;
   removeCustom: (ext: string) => void;
-  resetAll: () => void;
+  resetDefault: () => void;
 }
 
 export const useFileFilterStore = create<FileFilterState>((set, get) => ({
   groups: [],
-  disabled: load(DISABLED_KEY),
-  custom: load(CUSTOM_KEY),
+  enabled: load(ENABLED_KEY, DEFAULT_ENABLED),
+  custom: load(CUSTOM_KEY, []),
   loaded: false,
 
   loadGroups: async () => {
@@ -70,50 +75,56 @@ export const useFileFilterStore = create<FileFilterState>((set, get) => ({
     }
   },
 
-  isDisabled: (ext) => get().disabled.includes(ext),
+  isEnabled: (ext) => get().enabled.includes(ext),
 
-  toggleType: (ext) => {
-    const disabled = get().disabled;
-    const next = disabled.includes(ext)
-      ? disabled.filter((e) => e !== ext)
-      : [...disabled, ext];
-    save(DISABLED_KEY, next);
-    set({ disabled: next });
+  isCustomised: () => {
+    const e = [...get().enabled].sort();
+    const d = [...DEFAULT_ENABLED].sort();
+    return e.length !== d.length || e.some((x, i) => x !== d[i]);
   },
 
-  // Enable or disable a whole group of types at once.
+  toggleType: (ext) => {
+    const enabled = get().enabled;
+    const next = enabled.includes(ext)
+      ? enabled.filter((e) => e !== ext)
+      : [...enabled, ext];
+    save(ENABLED_KEY, next);
+    set({ enabled: next });
+  },
+
   setGroup: (types, enabled) => {
-    const set0 = new Set(get().disabled);
+    const set0 = new Set(get().enabled);
     for (const t of types) {
-      if (enabled) set0.delete(t);
-      else set0.add(t);
+      if (enabled) set0.add(t);
+      else set0.delete(t);
     }
     const next = Array.from(set0);
-    save(DISABLED_KEY, next);
-    set({ disabled: next });
+    save(ENABLED_KEY, next);
+    set({ enabled: next });
   },
 
   addCustom: (ext) => {
     const e = normaliseExt(ext);
     if (!e) return;
     const custom = get().custom;
-    if (custom.includes(e)) return;
-    const next = [...custom, e];
-    save(CUSTOM_KEY, next);
-    set({ custom: next });
+    const nextCustom = custom.includes(e) ? custom : [...custom, e];
+    // Adding a custom type enables it by default.
+    const enabled = get().enabled.includes(e) ? get().enabled : [...get().enabled, e];
+    save(CUSTOM_KEY, nextCustom);
+    save(ENABLED_KEY, enabled);
+    set({ custom: nextCustom, enabled });
   },
 
   removeCustom: (ext) => {
-    const next = get().custom.filter((e) => e !== ext);
-    save(CUSTOM_KEY, next);
-    // Also drop any disabled entry for it so it doesn't linger.
-    const disabled = get().disabled.filter((e) => e !== ext);
-    save(DISABLED_KEY, disabled);
-    set({ custom: next, disabled });
+    const nextCustom = get().custom.filter((e) => e !== ext);
+    const enabled = get().enabled.filter((e) => e !== ext);
+    save(CUSTOM_KEY, nextCustom);
+    save(ENABLED_KEY, enabled);
+    set({ custom: nextCustom, enabled });
   },
 
-  resetAll: () => {
-    save(DISABLED_KEY, []);
-    set({ disabled: [] });
+  resetDefault: () => {
+    save(ENABLED_KEY, DEFAULT_ENABLED);
+    set({ enabled: [...DEFAULT_ENABLED] });
   },
 }));

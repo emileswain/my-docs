@@ -2,7 +2,6 @@ import type { FileItem } from '../../types';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useFavouritesStore } from '../../store/useFavouritesStore';
 import { useAppStore } from '../../store/useAppStore';
-import { useFileFilterStore } from '../../store/useFileFilterStore';
 
 interface FileTreeItemProps {
   item: FileItem;
@@ -25,7 +24,6 @@ export function FileTreeItem({
   const isFavourite = useFavouritesStore((state) => state.favourites.includes(item.path));
   const toggleFavourite = useFavouritesStore((state) => state.toggleFavourite);
   const setImageViewerFolder = useAppStore((state) => state.setImageViewerFolder);
-  const typeDisabled = useFileFilterStore((state) => state.disabled);
 
   const isOpen = openFolders.includes(item.path);
   const isSelected = item.type === 'file' && currentFile === item.path;
@@ -97,8 +95,6 @@ export function FileTreeItem({
 
   // File rendering
   if (!shouldShowFile) return null;
-  // Hide files whose type is disabled in the file-type filter.
-  if (typeDisabled.includes(item.extension || '')) return null;
 
   const icon = getFileIcon(item.extension || '');
   return (

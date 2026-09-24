@@ -17,14 +17,14 @@ const POPUP_WIDTH = 760;
  */
 export function FileTypeFilterPopup({ anchorRef, onClose }: FileTypeFilterPopupProps) {
   const groups = useFileFilterStore((s) => s.groups);
-  const disabled = useFileFilterStore((s) => s.disabled);
+  const enabled = useFileFilterStore((s) => s.enabled);
   const custom = useFileFilterStore((s) => s.custom);
   const loadGroups = useFileFilterStore((s) => s.loadGroups);
   const toggleType = useFileFilterStore((s) => s.toggleType);
   const setGroup = useFileFilterStore((s) => s.setGroup);
   const addCustom = useFileFilterStore((s) => s.addCustom);
   const removeCustom = useFileFilterStore((s) => s.removeCustom);
-  const resetAll = useFileFilterStore((s) => s.resetAll);
+  const resetDefault = useFileFilterStore((s) => s.resetDefault);
 
   const [newType, setNewType] = useState('');
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -48,7 +48,7 @@ export function FileTypeFilterPopup({ anchorRef, onClose }: FileTypeFilterPopupP
     return () => window.removeEventListener('resize', place);
   }, [anchorRef]);
 
-  const isEnabled = (ext: string) => !disabled.includes(ext);
+  const isEnabled = (ext: string) => enabled.includes(ext);
 
   const Checkbox = ({ ext }: { ext: string }) => (
     <label className="flex items-center gap-2 py-0.5 cursor-pointer text-xs">
@@ -101,10 +101,10 @@ export function FileTypeFilterPopup({ anchorRef, onClose }: FileTypeFilterPopupP
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={resetAll}
+              onClick={resetDefault}
               className="text-xs px-2 py-0.5 rounded"
               style={{ color: 'var(--text-tertiary)' }}
-              title="Show all file types"
+              title="Reset to default file types"
             >
               Reset
             </button>

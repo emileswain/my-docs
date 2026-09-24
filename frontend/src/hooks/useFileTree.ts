@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useFileTreeStore } from '../store/useFileTreeStore';
+import { useFileFilterStore } from '../store/useFileFilterStore';
 import { fileService } from '../services/fileService';
 import type { FileItem } from '../types';
 
@@ -45,6 +46,10 @@ export function useFileTree(projectId: string | null) {
   const mergeFolderItems = useFileTreeStore((state) => state.mergeFolderItems);
   const getCache = useFileTreeStore((state) => state.getCache);
 
+  // Enabled file types drive what the tree surfaces; changing them rebuilds it.
+  const enabled = useFileFilterStore((state) => state.enabled);
+  const extKey = enabled.join(',');
+
   // Full path -> subpath relative to the project root (for browse_project).
   const toSubpath = useCallback((root: string, path: string) => {
     return path === root ? '' : path.startsWith(root + '/') ? path.slice(root.length + 1) : path;
@@ -53,12 +58,12 @@ export function useFileTree(projectId: string | null) {
   // Hydrate the entire tree in the background and mark it search-ready.
   const hydrateFull = useCallback(async (id: string) => {
     try {
-      const { cache, rootItems } = await fileService.browseAllFolders(id);
-      setFileTreeCache(id, { cache, rootItems, lastUpdated: Date.now(), hydrated: true });
+      const { cache, rootItems } = await fileService.browseAllFolders(id, enabled);
+      setFileTreeCache(id, { cache, rootItems, lastUpdated: Date.now(), hydrated: true, extKey });
     } catch (error) {
       console.error('Background tree hydration failed:', error);
     }
-  }, [setFileTreeCache]);
+  }, [setFileTreeCache, enabled, extKey]);
 
   /**
    * Progressive load: paint just the root immediately (one call), then hydrate
@@ -73,8 +78,10 @@ export function useFileTree(projectId: string | null) {
 
     const root = currentSubProject.path;
 
-    // Existing cache (revisit / fs-change refresh): re-hydrate silently.
-    if (getCache(projectId)) {
+    // Existing cache built with the SAME enabled types (revisit / fs-change):
+    // re-hydrate silently. If the type filter changed, fall through to rebuild.
+    const existing = getCache(projectId);
+    if (existing && existing.extKey === extKey) {
       hydrateFull(projectId);
       return;
     }
@@ -82,13 +89,14 @@ export function useFileTree(projectId: string | null) {
     setIsLoading(true);
     try {
       // Initial paint: root only (one call). Background hydration fills the rest.
-      const { items } = await fileService.browseProject(projectId, '');
+      const { items } = await fileService.browseProject(projectId, '', enabled);
       const cache = new Map<string, FileItem[]>([[root, items]]);
       setFileTreeCache(projectId, {
         cache,
         rootItems: items,
         lastUpdated: Date.now(),
         hydrated: false,
+        extKey,
       });
     } catch (error) {
       console.error('Error loading file tree:', error);
@@ -98,7 +106,7 @@ export function useFileTree(projectId: string | null) {
 
     // Background: full hydration for search + open-folder contents.
     hydrateFull(projectId);
-  }, [projectId, currentSubProject, getCache, hydrateFull, setFileTreeCache]);
+  }, [projectId, currentSubProject, getCache, hydrateFull, setFileTreeCache, enabled, extKey]);
 
   // Lazy-load a single folder on expand (no-op if already cached).
   const loadFolder = useCallback(async (folderPath: string) => {
@@ -108,13 +116,14 @@ export function useFileTree(projectId: string | null) {
     try {
       const { items } = await fileService.browseProject(
         projectId,
-        toSubpath(currentSubProject.path, folderPath)
+        toSubpath(currentSubProject.path, folderPath),
+        enabled
       );
       mergeFolderItems(projectId, folderPath, items);
     } catch (error) {
       console.error('Error loading folder:', error);
     }
-  }, [projectId, currentSubProject, getCache, mergeFolderItems, toSubpath]);
+  }, [projectId, currentSubProject, getCache, mergeFolderItems, toSubpath, enabled]);
 
   const getTreeData = useCallback(() => {
     if (!projectId) return null;

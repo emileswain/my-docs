@@ -64,14 +64,16 @@ pub fn get_file_type_groups() -> Value {
 pub async fn browse_project(
     project_id: String,
     subpath: Option<String>,
+    extensions: Vec<String>,
 ) -> Result<Value, String> {
     run_blocking(move || {
+        let allowed: std::collections::HashSet<String> = extensions.into_iter().collect();
         let root = store::project_path(&project_id).ok_or("Project not found")?;
         let dir = match subpath {
             Some(sp) if !sp.is_empty() => root.join(sp),
             _ => root,
         };
-        let items = scan::browse(&dir, &store::excluded_folders()).map_err(|e| e.to_string())?;
+        let items = scan::browse(&dir, &store::excluded_folders(), &allowed).map_err(|e| e.to_string())?;
         Ok(json!({ "items": items }))
     })
     .await
@@ -82,10 +84,11 @@ pub async fn browse_project(
 /// The recursive whole-project scan is the heaviest call; it MUST stay off the
 /// main thread.
 #[tauri::command]
-pub async fn browse_all(project_id: String) -> Result<Value, String> {
+pub async fn browse_all(project_id: String, extensions: Vec<String>) -> Result<Value, String> {
     run_blocking(move || {
+        let allowed: std::collections::HashSet<String> = extensions.into_iter().collect();
         let root = store::project_path(&project_id).ok_or("Project not found")?;
-        let (cache, root_items) = scan::browse_all(&root, &store::excluded_folders());
+        let (cache, root_items) = scan::browse_all(&root, &store::excluded_folders(), &allowed);
         Ok(json!({ "cache": cache, "rootItems": root_items }))
     })
     .await

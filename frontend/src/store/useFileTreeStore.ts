@@ -7,6 +7,8 @@ export interface FileTreeCache {
   lastUpdated: number;
   /** True once the full tree has hydrated in the background (search-ready). */
   hydrated?: boolean;
+  /** The enabled file-type set this cache was built with (rebuild if changed). */
+  extKey?: string;
 }
 
 /**

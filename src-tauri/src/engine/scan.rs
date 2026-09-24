@@ -51,10 +51,6 @@ pub fn list_images(dir: &Path) -> Vec<ImageItem> {
     images
 }
 
-/// Document extensions surfaced in the file tree (mirrors the Python browse
-/// routes, which only list these — not images).
-const DOC_EXTENSIONS: &[&str] = &[".md", ".json", ".yml", ".yaml", ".mmd", ".xml"];
-
 fn secs(t: std::io::Result<SystemTime>) -> f64 {
     t.ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
@@ -65,8 +61,12 @@ fn secs(t: std::io::Result<SystemTime>) -> f64 {
 /// One level of a project browse: folders (minus excluded) + document files.
 /// Folders sorted by name asc; files sorted by created-time desc — matching
 /// `browse_project` in the Python server.
-pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<FileItem>> {
-    let mut items = list_level(dir, excluded)?.0;
+pub fn browse(
+    dir: &Path,
+    excluded: &HashSet<String>,
+    allowed: &HashSet<String>,
+) -> std::io::Result<Vec<FileItem>> {
+    let mut items = list_level(dir, excluded, allowed)?.0;
     // Single-level browse: fill each child folder's has_images with its own scan.
     for item in &mut items {
         if item.kind == "folder" {
@@ -76,13 +76,16 @@ pub fn browse(dir: &Path, excluded: &HashSet<String>) -> std::io::Result<Vec<Fil
     Ok(items)
 }
 
-/// One directory read: returns (sorted folder+doc-file items, whether this
-/// folder directly contains an image file). Folder items come back with
-/// `has_images = None`; callers fill it. Detecting images here means we never
-/// need a second `read_dir` per folder.
+/// One directory read: returns (sorted folder + allowed-file items, whether this
+/// folder directly contains an image file). Files are included only when their
+/// extension is in `allowed` and is NOT an image (images are binary and live in
+/// the folder image viewer). Folder items come back with `has_images = None`;
+/// callers fill it. Detecting images here means we never need a second
+/// `read_dir` per folder.
 fn list_level(
     dir: &Path,
     excluded: &HashSet<String>,
+    allowed: &HashSet<String>,
 ) -> std::io::Result<(Vec<FileItem>, bool)> {
     let mut folders: Vec<FileItem> = Vec::new();
     let mut files: Vec<FileItem> = Vec::new();
@@ -117,8 +120,9 @@ fn list_level(
             let ext = extension_of(&path);
             if IMAGE_EXTENSIONS.contains(&ext.as_str()) {
                 has_image_here = true;
+                continue; // images never appear in the tree
             }
-            if !DOC_EXTENSIONS.contains(&ext.as_str()) {
+            if !allowed.contains(&ext) {
                 continue;
             }
             files.push(FileItem {
@@ -167,9 +171,10 @@ pub fn file_item(path: &Path) -> Option<FileItem> {
 pub fn browse_all(
     root: &Path,
     excluded: &HashSet<String>,
+    allowed: &HashSet<String>,
 ) -> (std::collections::HashMap<String, Vec<FileItem>>, Vec<FileItem>) {
     let mut cache: std::collections::HashMap<String, Vec<FileItem>> = std::collections::HashMap::new();
-    scan_recursive(root, excluded, &mut cache);
+    scan_recursive(root, excluded, allowed, &mut cache);
     let root_items = cache
         .get(&root.to_string_lossy().to_string())
         .cloned()
@@ -183,12 +188,13 @@ pub fn browse_all(
 fn scan_recursive(
     dir: &Path,
     excluded: &HashSet<String>,
+    allowed: &HashSet<String>,
     cache: &mut std::collections::HashMap<String, Vec<FileItem>>,
 ) -> bool {
-    let (mut items, has_images_here) = list_level(dir, excluded).unwrap_or((Vec::new(), false));
+    let (mut items, has_images_here) = list_level(dir, excluded, allowed).unwrap_or((Vec::new(), false));
     for item in &mut items {
         if item.kind == "folder" {
-            let child_has = scan_recursive(Path::new(&item.path), excluded, cache);
+            let child_has = scan_recursive(Path::new(&item.path), excluded, allowed, cache);
             item.has_images = Some(child_has);
         }
     }
