@@ -7,6 +7,8 @@ import { useFileSystemEvents } from '../../hooks/useFileSystemEvents';
 import { FileTreeItem } from './FileTreeItem';
 import { WatchedFiles } from './WatchedFiles';
 import { FavouriteFiles } from './FavouriteFiles';
+import { FileTypeFilterPopup } from './FileTypeFilterPopup';
+import { useFileFilterStore } from '../../store/useFileFilterStore';
 
 interface FileTreeProps {
   onFileSelect: (path: string, name: string) => void;
@@ -15,6 +17,8 @@ interface FileTreeProps {
 export function FileTree({ onFileSelect }: FileTreeProps) {
   const [filter, setFilter] = useState('');
   const [allExpanded, setAllExpanded] = useState(false);
+  const [showTypeFilter, setShowTypeFilter] = useState(false);
+  const typeFilterActive = useFileFilterStore((s) => s.disabled.length > 0);
 
   const currentProject = useProjectStore((state) => state.currentProject);
   const currentFile = useProjectStore((state) => state.currentFile);
@@ -266,7 +270,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
       }}
     >
       <div
-        className="flex items-center px-4 gap-2 flex-shrink-0"
+        className="flex items-center px-4 gap-2 flex-shrink-0 relative"
         style={{
           height: '60px',
           borderBottom: '1px solid var(--border-primary)',
@@ -296,6 +300,22 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        )}
+        <button
+          onClick={() => setShowTypeFilter((v) => !v)}
+          className="p-1"
+          style={{ color: typeFilterActive ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+          title="Filter file types"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h18l-7 8v6l-4 2v-8z" />
+          </svg>
+        </button>
+        {showTypeFilter && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowTypeFilter(false)} />
+            <FileTypeFilterPopup onClose={() => setShowTypeFilter(false)} />
+          </>
         )}
         <button
           onClick={handleCollapseAll}

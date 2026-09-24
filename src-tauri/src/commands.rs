@@ -50,6 +50,12 @@ pub fn get_settings() -> Value {
     store::settings()
 }
 
+/// The definitive grouped file-type list for the tree filter popup.
+#[tauri::command]
+pub fn get_file_type_groups() -> Value {
+    crate::file_types::groups()
+}
+
 /// GET /api/projects/:id/browse[/:subpath] -> `{ items: [...] }`.
 ///
 /// `async` + `spawn_blocking`: the directory read runs on a blocking worker

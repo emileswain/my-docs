@@ -8,6 +8,7 @@
 
 mod commands;
 mod engine;
+mod file_types;
 mod menu;
 mod state;
 mod store;
@@ -55,6 +56,7 @@ pub fn run() {
             // data reads (ported from Flask routes)
             commands::get_groups,
             commands::get_settings,
+            commands::get_file_type_groups,
             commands::browse_project,
             commands::browse_all,
             commands::get_file,
