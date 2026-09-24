@@ -8,6 +8,7 @@ import { FileTreeItem } from './FileTreeItem';
 import { WatchedFiles } from './WatchedFiles';
 import { FavouriteFiles } from './FavouriteFiles';
 import { FileTypeFilterPopup } from './FileTypeFilterPopup';
+import { WatchConfigPopup } from './WatchConfigPopup';
 import { useFileFilterStore } from '../../store/useFileFilterStore';
 
 interface FileTreeProps {
@@ -20,6 +21,9 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   const [showTypeFilter, setShowTypeFilter] = useState(false);
   const typeFilterActive = useFileFilterStore((s) => s.isCustomised());
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const [showWatchConfig, setShowWatchConfig] = useState(false);
+  const [watchesVersion, setWatchesVersion] = useState(0);
+  const watchConfigButtonRef = useRef<HTMLButtonElement>(null);
 
   const currentProject = useProjectStore((state) => state.currentProject);
   const currentFile = useProjectStore((state) => state.currentFile);
@@ -371,7 +375,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
         {currentProject && <FavouriteFiles onFileSelect={onFileSelect} />}
 
         {/* Watched files section */}
-        {currentProject && <WatchedFiles onFileSelect={onFileSelect} />}
+        {currentProject && <WatchedFiles onFileSelect={onFileSelect} refreshKey={watchesVersion} />}
 
         <div className="p-4">
         {!currentProject ? (
@@ -395,6 +399,37 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
         )}
         </div>
       </div>
+
+      {/* Bottom bar: per-project watched-files configuration */}
+      <div
+        className="flex items-center px-4 gap-2 flex-shrink-0 relative"
+        style={{
+          height: '40px',
+          borderTop: '1px solid var(--border-primary)',
+          backgroundColor: 'var(--bg-tertiary)',
+        }}
+      >
+        <button
+          ref={watchConfigButtonRef}
+          onClick={() => setShowWatchConfig((v) => !v)}
+          disabled={!currentProject}
+          className="p-1 flex items-center gap-1.5 text-xs"
+          style={{ color: currentProject ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}
+          title="Configure watched files for this project"
+        >
+          <i className="fas fa-binoculars" />
+          Watched files
+        </button>
+        {showWatchConfig && currentProject && (
+          <WatchConfigPopup
+            projectId={currentProject.id}
+            anchorRef={watchConfigButtonRef}
+            onClose={() => setShowWatchConfig(false)}
+            onChange={() => setWatchesVersion((v) => v + 1)}
+          />
+        )}
+      </div>
+
       {/* Resize handle */}
       <div
         className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 transition-colors"

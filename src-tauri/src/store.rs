@@ -197,6 +197,121 @@ pub fn global_watches() -> Vec<Value> {
         .unwrap_or_default()
 }
 
+// --- Project watch CRUD (writes projects.json) ---
+
+fn projects_path() -> PathBuf {
+    config_dir().join("projects.json")
+}
+
+/// Short unique-ish id for a new watch (matches the app's short-id style).
+fn generate_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("w{nanos:x}")
+}
+
+fn load_projects() -> Value {
+    read_json(projects_path()).unwrap_or_else(|| json!({ "version": 2, "groups": [] }))
+}
+
+fn save_projects(mut doc: Value) -> Result<(), String> {
+    if let Some(obj) = doc.as_object_mut() {
+        obj.entry("version").or_insert(json!(2));
+    }
+    std::fs::create_dir_all(config_dir()).map_err(|e| e.to_string())?;
+    let text = serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?;
+    std::fs::write(projects_path(), text).map_err(|e| e.to_string())
+}
+
+/// Run `f` against the mutable subproject object with `project_id`, then persist.
+fn with_subproject<F, T>(project_id: &str, f: F) -> Result<T, String>
+where
+    F: FnOnce(&mut serde_json::Map<String, Value>) -> Result<T, String>,
+{
+    let mut doc = load_projects();
+    let groups = doc
+        .get_mut("groups")
+        .and_then(|g| g.as_array_mut())
+        .ok_or("No groups")?;
+    for group in groups.iter_mut() {
+        if let Some(subs) = group.get_mut("subprojects").and_then(|s| s.as_array_mut()) {
+            for sp in subs.iter_mut() {
+                if sp.get("id").and_then(|v| v.as_str()) == Some(project_id) {
+                    let obj = sp.as_object_mut().ok_or("Bad subproject")?;
+                    let result = f(obj)?;
+                    save_projects(doc)?;
+                    return Ok(result);
+                }
+            }
+        }
+    }
+    Err("Project not found".into())
+}
+
+/// The project's own (project-specific) watches, for editing.
+pub fn project_watches(project_id: &str) -> Vec<Value> {
+    subproject(project_id)
+        .and_then(|sp| sp.get("watches").and_then(|v| v.as_array()).cloned())
+        .unwrap_or_default()
+}
+
+/// Add a project watch (assigns an id); returns the stored watch.
+pub fn add_project_watch(project_id: &str, mut watch: Value) -> Result<Value, String> {
+    if watch.get("id").and_then(|v| v.as_str()).unwrap_or("").is_empty() {
+        watch["id"] = json!(generate_id());
+    }
+    let stored = watch.clone();
+    with_subproject(project_id, move |sp| {
+        let watches = sp.entry("watches").or_insert_with(|| json!([]));
+        watches
+            .as_array_mut()
+            .ok_or("watches not an array")?
+            .push(watch);
+        Ok(())
+    })?;
+    Ok(stored)
+}
+
+/// Merge `updates` into a project watch.
+pub fn update_project_watch(project_id: &str, watch_id: &str, updates: Value) -> Result<(), String> {
+    with_subproject(project_id, move |sp| {
+        let watches = sp
+            .get_mut("watches")
+            .and_then(|v| v.as_array_mut())
+            .ok_or("Watch not found")?;
+        for w in watches.iter_mut() {
+            if w.get("id").and_then(|v| v.as_str()) == Some(watch_id) {
+                if let (Some(wobj), Some(uobj)) = (w.as_object_mut(), updates.as_object()) {
+                    for (k, v) in uobj {
+                        wobj.insert(k.clone(), v.clone());
+                    }
+                }
+                return Ok(());
+            }
+        }
+        Err("Watch not found".into())
+    })
+}
+
+/// Delete a project watch.
+pub fn delete_project_watch(project_id: &str, watch_id: &str) -> Result<(), String> {
+    with_subproject(project_id, move |sp| {
+        let watches = sp
+            .get_mut("watches")
+            .and_then(|v| v.as_array_mut())
+            .ok_or("Watch not found")?;
+        let before = watches.len();
+        watches.retain(|w| w.get("id").and_then(|v| v.as_str()) != Some(watch_id));
+        if watches.len() == before {
+            return Err("Watch not found".into());
+        }
+        Ok(())
+    })
+}
+
 /// All project paths (for the "is this file inside a watched project?" check).
 pub fn all_project_paths() -> Vec<String> {
     let mut out = Vec::new();

@@ -63,42 +63,27 @@ export class SettingsService {
     return response.json();
   }
 
+  // The project's own (editable) watches. Ported to the Rust engine.
+  async listProjectWatches(projectId: string): Promise<Watch[]> {
+    return invoke<Watch[]>('list_project_watches', { projectId });
+  }
+
   async addProjectWatch(projectId: string, data: Omit<Watch, 'id'>): Promise<Watch> {
-    const response = await fetch(`/api/projects/${projectId}/watches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to add project watch');
-    const result = await response.json();
+    const result = await invoke<{ watch: Watch }>('add_project_watch', { projectId, watch: data });
     return result.watch;
   }
 
   async updateProjectWatch(projectId: string, watchId: string, data: Partial<Watch>): Promise<void> {
-    const response = await fetch(`/api/projects/${projectId}/watches/${watchId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to update project watch');
+    await invoke('update_project_watch', { projectId, watchId, updates: data });
   }
 
   async deleteProjectWatch(projectId: string, watchId: string): Promise<void> {
-    const response = await fetch(`/api/projects/${projectId}/watches/${watchId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete project watch');
+    await invoke('delete_project_watch', { projectId, watchId });
   }
 
   async refreshWatchScript(projectId: string, watchId: string): Promise<{ pattern: string }> {
-    const response = await fetch(`/api/projects/${projectId}/watches/${watchId}/refresh`, {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to refresh watch');
-    }
-    return response.json();
+    // Runs the watch's script in the project dir; returns applied fields.
+    return invoke<{ pattern: string }>('refresh_watch_script', { projectId, watchId });
   }
 
   async getWatchedFiles(projectId: string): Promise<WatchResult[]> {

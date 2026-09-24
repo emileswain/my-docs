@@ -5,6 +5,8 @@ import type { WatchResult } from '../../types';
 
 interface WatchedFilesProps {
   onFileSelect: (path: string, name: string) => void;
+  /** Bump to force a reload after watches are edited. */
+  refreshKey?: number;
 }
 
 function getFileIcon(extension: string): string {
@@ -27,7 +29,7 @@ function timeAgo(timestamp: number): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
+export function WatchedFiles({ onFileSelect, refreshKey }: WatchedFilesProps) {
   const [watchResults, setWatchResults] = useState<WatchResult[]>([]);
   const [collapsedWatches, setCollapsedWatches] = useState<Set<string>>(new Set());
   const [refreshingWatch, setRefreshingWatch] = useState<string | null>(null);
@@ -49,7 +51,8 @@ export function WatchedFiles({ onFileSelect }: WatchedFilesProps) {
 
   useEffect(() => {
     loadWatchedFiles();
-  }, [loadWatchedFiles]);
+    // refreshKey bumps when watches are edited in the config popup.
+  }, [loadWatchedFiles, refreshKey]);
 
   const handleRefresh = async (watchId: string, hasScript: boolean) => {
     if (!currentProject || refreshingWatch) return;

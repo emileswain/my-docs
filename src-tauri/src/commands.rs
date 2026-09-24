@@ -155,6 +155,119 @@ pub async fn list_folder_images(folder: String) -> Result<Value, String> {
     .await
 }
 
+// --- Project watch CRUD + script refresh ---
+
+/// The project's own (editable) watches.
+#[tauri::command]
+pub fn list_project_watches(project_id: String) -> Vec<Value> {
+    store::project_watches(&project_id)
+}
+
+/// Add a project watch; returns `{ success, watch }`.
+#[tauri::command]
+pub fn add_project_watch(project_id: String, watch: Value) -> Result<Value, String> {
+    let stored = store::add_project_watch(&project_id, watch)?;
+    Ok(json!({ "success": true, "watch": stored }))
+}
+
+/// Merge updates into a project watch.
+#[tauri::command]
+pub fn update_project_watch(
+    project_id: String,
+    watch_id: String,
+    updates: Value,
+) -> Result<Value, String> {
+    store::update_project_watch(&project_id, &watch_id, updates)?;
+    Ok(json!({ "success": true }))
+}
+
+/// Delete a project watch.
+#[tauri::command]
+pub fn delete_project_watch(project_id: String, watch_id: String) -> Result<Value, String> {
+    store::delete_project_watch(&project_id, &watch_id)?;
+    Ok(json!({ "success": true }))
+}
+
+/// Run a project watch's shell script in the project dir; apply its output to
+/// the watch (pattern / name / subfolder) and return the applied fields.
+#[tauri::command]
+pub async fn refresh_watch_script(project_id: String, watch_id: String) -> Result<Value, String> {
+    run_blocking(move || {
+        let root = store::project_path(&project_id).ok_or("Project not found")?;
+        let watch = store::project_watches(&project_id)
+            .into_iter()
+            .find(|w| w.get("id").and_then(|v| v.as_str()) == Some(watch_id.as_str()))
+            .ok_or("Watch not found")?;
+        let script = watch
+            .get("script")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if script.is_empty() {
+            return Err("No script configured for this watch".into());
+        }
+
+        let output = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&script)
+            .current_dir(&root)
+            .output()
+            .map_err(|e| format!("Failed to run script: {e}"))?;
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            let err = err.trim();
+            return Err(format!(
+                "Script failed: {}",
+                if err.is_empty() { "non-zero exit code" } else { err }
+            ));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if stdout.is_empty() {
+            return Err("Script returned empty output".into());
+        }
+
+        // Parse output: JSON (optionally a `watch` section) or plain text = pattern.
+        let mut updates = serde_json::Map::new();
+        match serde_json::from_str::<Value>(&stdout) {
+            Ok(Value::Object(map)) => {
+                if let Some(e) = map.get("error").and_then(|v| v.as_str()) {
+                    return Err(format!("Script error: {e}"));
+                }
+                let section = map
+                    .get("watch")
+                    .and_then(|v| v.as_object())
+                    .cloned()
+                    .unwrap_or(map);
+                for key in ["pattern", "name", "subfolder"] {
+                    if let Some(v) = section.get(key) {
+                        let keep = match v {
+                            Value::String(s) => !s.is_empty(),
+                            Value::Null => false,
+                            _ => true,
+                        };
+                        if keep {
+                            updates.insert(key.to_string(), v.clone());
+                        }
+                    }
+                }
+            }
+            _ => {
+                updates.insert("pattern".into(), json!(stdout));
+            }
+        }
+
+        if updates.is_empty() {
+            return Err("Script returned no applicable values".into());
+        }
+        store::update_project_watch(&project_id, &watch_id, Value::Object(updates.clone()))?;
+        Ok(Value::Object(updates))
+    })
+    .await
+}
+
 // --- Document notes (ported from the /api/notes routes) ---
 
 /// GET /api/notes/:path -> the notes JSON (`{ notes: [...] }`).
