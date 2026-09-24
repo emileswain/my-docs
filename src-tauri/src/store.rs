@@ -197,6 +197,55 @@ pub fn global_watches() -> Vec<Value> {
         .unwrap_or_default()
 }
 
+fn persist_global_watches(watches: Vec<Value>) -> Result<(), String> {
+    let mut map = load_settings_object();
+    map.insert("watches".into(), Value::Array(watches));
+    save_settings_object(map)
+}
+
+/// Add a global watch (assigns an id); returns the stored watch.
+pub fn add_global_watch(mut watch: Value) -> Result<Value, String> {
+    if watch.get("id").and_then(|v| v.as_str()).unwrap_or("").is_empty() {
+        watch["id"] = json!(generate_id());
+    }
+    let mut watches = global_watches();
+    watches.push(watch.clone());
+    persist_global_watches(watches)?;
+    Ok(watch)
+}
+
+/// Merge updates into a global watch.
+pub fn update_global_watch(watch_id: &str, updates: Value) -> Result<(), String> {
+    let mut watches = global_watches();
+    let mut found = false;
+    for w in watches.iter_mut() {
+        if w.get("id").and_then(|v| v.as_str()) == Some(watch_id) {
+            if let (Some(wobj), Some(uobj)) = (w.as_object_mut(), updates.as_object()) {
+                for (k, v) in uobj {
+                    wobj.insert(k.clone(), v.clone());
+                }
+            }
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        return Err("Watch not found".into());
+    }
+    persist_global_watches(watches)
+}
+
+/// Delete a global watch.
+pub fn delete_global_watch(watch_id: &str) -> Result<(), String> {
+    let mut watches = global_watches();
+    let before = watches.len();
+    watches.retain(|w| w.get("id").and_then(|v| v.as_str()) != Some(watch_id));
+    if watches.len() == before {
+        return Err("Watch not found".into());
+    }
+    persist_global_watches(watches)
+}
+
 // --- Project watch CRUD (writes projects.json) ---
 
 fn projects_path() -> PathBuf {

@@ -124,6 +124,9 @@ export interface Watch {
   subfolder: string;
   pattern: string;
   enabled: boolean;
+  /** When true, the pattern is derived from the current git branch's issue number. */
+  branch_issue?: boolean;
+  /** Deprecated free-form script (no longer executed); kept for back-compat. */
   script?: string;
   source?: 'global' | 'project';
 }

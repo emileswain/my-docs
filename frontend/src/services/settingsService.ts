@@ -28,39 +28,29 @@ export class SettingsService {
 
   // --- Watch operations ---
 
+  // Global watch operations (ported to the Rust engine).
+  async getGlobalWatches(): Promise<Watch[]> {
+    return invoke<Watch[]>('get_global_watches');
+  }
+
   async addGlobalWatch(data: Omit<Watch, 'id'>): Promise<Watch> {
-    const response = await fetch('/api/settings/watches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to add watch');
-    const result = await response.json();
+    const result = await invoke<{ watch: Watch }>('add_global_watch', { watch: data });
     return result.watch;
   }
 
   async updateGlobalWatch(id: string, data: Partial<Watch>): Promise<void> {
-    const response = await fetch(`/api/settings/watches/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to update watch');
+    await invoke('update_global_watch', { watchId: id, updates: data });
   }
 
   async deleteGlobalWatch(id: string): Promise<void> {
-    const response = await fetch(`/api/settings/watches/${id}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete watch');
+    await invoke('delete_global_watch', { watchId: id });
   }
 
   // --- Project watch operations ---
 
   async getProjectWatches(projectId: string): Promise<Watch[]> {
-    const response = await fetch(`/api/projects/${projectId}/watches`);
-    if (!response.ok) throw new Error('Failed to fetch project watches');
-    return response.json();
+    // Resolved active watches (global + project), ported to the Rust engine.
+    return invoke<Watch[]>('get_project_watches', { projectId });
   }
 
   // The project's own (editable) watches. Ported to the Rust engine.
@@ -81,9 +71,10 @@ export class SettingsService {
     await invoke('delete_project_watch', { projectId, watchId });
   }
 
-  async refreshWatchScript(projectId: string, watchId: string): Promise<{ pattern: string }> {
-    // Runs the watch's script in the project dir; returns applied fields.
-    return invoke<{ pattern: string }>('refresh_watch_script', { projectId, watchId });
+  // The current git branch's issue number for a project (or null). Used by the
+  // branch-issue watch filter.
+  async getBranchIssue(projectId: string): Promise<string | null> {
+    return invoke<string | null>('get_branch_issue', { projectId });
   }
 
   async getWatchedFiles(projectId: string): Promise<WatchResult[]> {

@@ -20,10 +20,10 @@ export function WatchEditor({
 }: WatchEditorProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', subfolder: '', pattern: '*', enabled: true, script: '' });
+  const [form, setForm] = useState({ name: '', subfolder: '', pattern: '*', enabled: true, branch_issue: false });
 
   const resetForm = () => {
-    setForm({ name: '', subfolder: '', pattern: '*', enabled: true, script: '' });
+    setForm({ name: '', subfolder: '', pattern: '*', enabled: true, branch_issue: false });
     setIsAdding(false);
     setEditingId(null);
   };
@@ -34,7 +34,7 @@ export function WatchEditor({
       subfolder: watch.subfolder,
       pattern: watch.pattern,
       enabled: watch.enabled,
-      script: watch.script || '',
+      branch_issue: watch.branch_issue || false,
     });
     setEditingId(watch.id);
     setIsAdding(false);
@@ -43,9 +43,6 @@ export function WatchEditor({
   const handleSubmit = () => {
     if (!form.name.trim()) return;
     const data: Record<string, unknown> = { ...form };
-    if (!form.script.trim()) {
-      delete data.script;
-    }
     if (editingId) {
       onUpdate(editingId, data as Partial<Watch>);
     } else {
@@ -120,8 +117,8 @@ export function WatchEditor({
                   )}
                 </div>
                 <code className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  {watch.subfolder || '/'} &rarr; {watch.pattern}
-                  {watch.script && <i className="fas fa-terminal ml-2" title="Has script" />}
+                  {watch.subfolder || '/'} &rarr; {watch.branch_issue ? 'branch #' : watch.pattern}
+                  {watch.branch_issue && <i className="fas fa-code-branch ml-2" title="Filters by current branch issue #" />}
                 </code>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -205,46 +202,43 @@ export function WatchEditor({
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
-              File Pattern (glob)
-            </label>
+          <div className="flex items-center gap-2">
             <input
-              type="text"
-              value={form.pattern}
-              onChange={(e) => setForm({ ...form, pattern: e.target.value })}
-              placeholder="e.g., 277* or *.md"
-              className="w-full px-2 py-1.5 rounded text-sm focus:outline-none focus:ring-1"
-              style={{
-                border: '1px solid var(--border-primary)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-              }}
+              type="checkbox"
+              checked={form.branch_issue}
+              onChange={(e) => setForm({ ...form, branch_issue: e.target.checked })}
+              id="watch-branch-issue"
             />
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Uses glob syntax: * matches anything, ? matches single char. E.g., 277* matches all files starting with "277".
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
-              Script (optional)
+            <label htmlFor="watch-branch-issue" className="text-sm" style={{ color: 'var(--text-primary)' }}>
+              Filter by current git branch issue #
             </label>
-            <input
-              type="text"
-              value={form.script}
-              onChange={(e) => setForm({ ...form, script: e.target.value })}
-              placeholder="e.g., git branch --show-current | grep -oP '\\d+' | head -1"
-              className="w-full px-2 py-1.5 rounded text-sm font-mono focus:outline-none focus:ring-1"
-              style={{
-                border: '1px solid var(--border-primary)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-              }}
-            />
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Shell command run in the project directory. Its stdout replaces the pattern. Use the refresh button in the file tree to re-run.
-            </p>
           </div>
+          {form.branch_issue ? (
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              The pattern is derived from the current branch, e.g. branch <code>feat/277_x</code> matches files starting with <code>277</code>.
+            </p>
+          ) : (
+            <div>
+              <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+                File Pattern (glob)
+              </label>
+              <input
+                type="text"
+                value={form.pattern}
+                onChange={(e) => setForm({ ...form, pattern: e.target.value })}
+                placeholder="e.g., 277* or *.md"
+                className="w-full px-2 py-1.5 rounded text-sm focus:outline-none focus:ring-1"
+                style={{
+                  border: '1px solid var(--border-primary)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                Uses glob syntax: * matches anything, ? matches single char. E.g., 277* matches all files starting with "277".
+              </p>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

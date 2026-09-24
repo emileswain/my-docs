@@ -163,6 +163,45 @@ pub fn list_project_watches(project_id: String) -> Vec<Value> {
     store::project_watches(&project_id)
 }
 
+/// Resolved active watches for a project: global watches (respecting per-project
+/// enable/disable overrides) tagged `source: "global"`, plus the project's own
+/// enabled watches tagged `source: "project"`. Mirrors the Python route.
+#[tauri::command]
+pub fn get_project_watches(project_id: String) -> Result<Vec<Value>, String> {
+    let sub = store::subproject(&project_id).ok_or("Project not found")?;
+    let id_set = |key: &str| -> std::collections::HashSet<String> {
+        sub.get(key)
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .unwrap_or_default()
+    };
+    let disabled = id_set("disabled_watches");
+    let enabled_over = id_set("enabled_watches");
+
+    let mut active: Vec<Value> = Vec::new();
+    for mut gw in store::global_watches() {
+        let wid = gw.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        if disabled.contains(&wid) {
+            continue;
+        }
+        let on = gw.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+        if on || enabled_over.contains(&wid) {
+            gw["source"] = json!("global");
+            active.push(gw);
+        }
+    }
+    if let Some(pws) = sub.get("watches").and_then(|v| v.as_array()) {
+        for pw in pws {
+            if pw.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true) {
+                let mut w = pw.clone();
+                w["source"] = json!("project");
+                active.push(w);
+            }
+        }
+    }
+    Ok(active)
+}
+
 /// Add a project watch; returns `{ success, watch }`.
 #[tauri::command]
 pub fn add_project_watch(project_id: String, watch: Value) -> Result<Value, String> {
@@ -188,84 +227,66 @@ pub fn delete_project_watch(project_id: String, watch_id: String) -> Result<Valu
     Ok(json!({ "success": true }))
 }
 
-/// Run a project watch's shell script in the project dir; apply its output to
-/// the watch (pattern / name / subfolder) and return the applied fields.
+/// Extract the issue/ticket number from a git branch name — the first run of
+/// digits, e.g. `feat/123_blah` -> `123`. Runs a FIXED `git` command (explicit
+/// args, no shell), so there's no arbitrary-command risk.
+pub fn branch_issue(project_dir: &std::path::Path) -> Option<String> {
+    let output = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(project_dir)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let branch = String::from_utf8_lossy(&output.stdout);
+    let digits: String = branch
+        .chars()
+        .skip_while(|c| !c.is_ascii_digit())
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        None
+    } else {
+        Some(digits)
+    }
+}
+
+/// The current git branch's issue number for a project (or null). Used by the
+/// watch config UI to preview the branch-issue filter.
 #[tauri::command]
-pub async fn refresh_watch_script(project_id: String, watch_id: String) -> Result<Value, String> {
+pub async fn get_branch_issue(project_id: String) -> Result<Value, String> {
     run_blocking(move || {
         let root = store::project_path(&project_id).ok_or("Project not found")?;
-        let watch = store::project_watches(&project_id)
-            .into_iter()
-            .find(|w| w.get("id").and_then(|v| v.as_str()) == Some(watch_id.as_str()))
-            .ok_or("Watch not found")?;
-        let script = watch
-            .get("script")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .trim()
-            .to_string();
-        if script.is_empty() {
-            return Err("No script configured for this watch".into());
-        }
-
-        let output = std::process::Command::new("sh")
-            .arg("-c")
-            .arg(&script)
-            .current_dir(&root)
-            .output()
-            .map_err(|e| format!("Failed to run script: {e}"))?;
-
-        if !output.status.success() {
-            let err = String::from_utf8_lossy(&output.stderr);
-            let err = err.trim();
-            return Err(format!(
-                "Script failed: {}",
-                if err.is_empty() { "non-zero exit code" } else { err }
-            ));
-        }
-
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if stdout.is_empty() {
-            return Err("Script returned empty output".into());
-        }
-
-        // Parse output: JSON (optionally a `watch` section) or plain text = pattern.
-        let mut updates = serde_json::Map::new();
-        match serde_json::from_str::<Value>(&stdout) {
-            Ok(Value::Object(map)) => {
-                if let Some(e) = map.get("error").and_then(|v| v.as_str()) {
-                    return Err(format!("Script error: {e}"));
-                }
-                let section = map
-                    .get("watch")
-                    .and_then(|v| v.as_object())
-                    .cloned()
-                    .unwrap_or(map);
-                for key in ["pattern", "name", "subfolder"] {
-                    if let Some(v) = section.get(key) {
-                        let keep = match v {
-                            Value::String(s) => !s.is_empty(),
-                            Value::Null => false,
-                            _ => true,
-                        };
-                        if keep {
-                            updates.insert(key.to_string(), v.clone());
-                        }
-                    }
-                }
-            }
-            _ => {
-                updates.insert("pattern".into(), json!(stdout));
-            }
-        }
-
-        if updates.is_empty() {
-            return Err("Script returned no applicable values".into());
-        }
-        store::update_project_watch(&project_id, &watch_id, Value::Object(updates.clone()))?;
-        Ok(Value::Object(updates))
+        Ok(json!(branch_issue(&root)))
     })
     .await
+}
+
+// --- Global watch CRUD (writes settings.json) ---
+
+/// Global watches from settings.json.
+#[tauri::command]
+pub fn get_global_watches() -> Vec<Value> {
+    store::global_watches()
+}
+
+#[tauri::command]
+pub fn add_global_watch(watch: Value) -> Result<Value, String> {
+    let stored = store::add_global_watch(watch)?;
+    Ok(json!({ "success": true, "watch": stored }))
+}
+
+#[tauri::command]
+pub fn update_global_watch(watch_id: String, updates: Value) -> Result<Value, String> {
+    store::update_global_watch(&watch_id, updates)?;
+    Ok(json!({ "success": true }))
+}
+
+#[tauri::command]
+pub fn delete_global_watch(watch_id: String) -> Result<Value, String> {
+    store::delete_global_watch(&watch_id)?;
+    Ok(json!({ "success": true }))
 }
 
 // --- Document notes (ported from the /api/notes routes) ---
@@ -385,16 +406,33 @@ pub async fn get_watched_files(project_id: String) -> Result<Value, String> {
         // Case-insensitive fnmatch, matching Python's fnmatch on macOS.
         let opts = MatchOptions { case_sensitive: false, ..Default::default() };
 
+        // Branch-issue watches derive their pattern from the current git branch.
+        let issue = branch_issue(&root);
+
         let mut results = Vec::new();
         for watch in active {
             let subfolder = watch.get("subfolder").and_then(|v| v.as_str()).unwrap_or("");
             let subfolder = subfolder.trim_matches('/');
-            let pattern = watch.get("pattern").and_then(|v| v.as_str()).unwrap_or("*");
+            let branch_mode = watch.get("branch_issue").and_then(|v| v.as_bool()).unwrap_or(false);
+
+            // The effective pattern: `<issue>*` for branch watches (none -> no match).
+            let pattern: String = if branch_mode {
+                match &issue {
+                    Some(n) => format!("{n}*"),
+                    None => {
+                        results.push(json!({ "watch": watch, "files": [] }));
+                        continue;
+                    }
+                }
+            } else {
+                watch.get("pattern").and_then(|v| v.as_str()).unwrap_or("*").to_string()
+            };
+
             let search = if subfolder.is_empty() { root.clone() } else { root.join(subfolder) };
 
             let mut files: Vec<crate::engine::types::FileItem> = Vec::new();
             if search.is_dir() {
-                let pat = Pattern::new(pattern).ok();
+                let pat = Pattern::new(&pattern).ok();
                 if let Ok(rd) = std::fs::read_dir(&search) {
                     for entry in rd.flatten() {
                         let path = entry.path();

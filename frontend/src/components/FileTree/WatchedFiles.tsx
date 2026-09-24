@@ -54,13 +54,11 @@ export function WatchedFiles({ onFileSelect, refreshKey }: WatchedFilesProps) {
     // refreshKey bumps when watches are edited in the config popup.
   }, [loadWatchedFiles, refreshKey]);
 
-  const handleRefresh = async (watchId: string, hasScript: boolean) => {
+  const handleRefresh = async (watchId: string) => {
     if (!currentProject || refreshingWatch) return;
     setRefreshingWatch(watchId);
     try {
-      if (hasScript) {
-        await settingsService.refreshWatchScript(currentProject.id, watchId);
-      }
+      // Re-list (branch-issue watches re-derive from the current branch here).
       await loadWatchedFiles();
     } catch (err) {
       console.error('Failed to refresh watch:', err);
@@ -69,8 +67,8 @@ export function WatchedFiles({ onFileSelect, refreshKey }: WatchedFilesProps) {
     }
   };
 
-  // Filter out watches with no files (but keep watches with scripts even if empty, so user can refresh)
-  const activeResults = watchResults.filter(r => r.files.length > 0 || r.watch.script);
+  // Filter out watches with no files (but keep branch-issue watches even if empty, so they can be refreshed)
+  const activeResults = watchResults.filter(r => r.files.length > 0 || r.watch.branch_issue);
 
   if (activeResults.length === 0) return null;
 
@@ -120,10 +118,10 @@ export function WatchedFiles({ onFileSelect, refreshKey }: WatchedFilesProps) {
               <button
                 className="p-0.5 rounded"
                 style={{ color: 'var(--text-tertiary)' }}
-                title={result.watch.script ? 'Run script & refresh' : 'Refresh files'}
+                title="Refresh files"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleRefresh(result.watch.id, !!result.watch.script);
+                  handleRefresh(result.watch.id);
                 }}
               >
                 <i className={`fas fa-sync-alt text-xs ${refreshingWatch === result.watch.id ? 'fa-spin' : ''}`} />

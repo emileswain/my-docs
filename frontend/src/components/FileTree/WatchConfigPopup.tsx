@@ -12,18 +12,15 @@ interface WatchConfigPopupProps {
 
 const POPUP_WIDTH = 520;
 
-/** Default script: the current git branch's ticket number as a glob (e.g. 277*). */
-const DEFAULT_SCRIPT =
-  'echo "$(git rev-parse --abbrev-ref HEAD 2>/dev/null | grep -oE \'[0-9]+\' | head -1)*"';
-
 /**
  * Floating per-project watch configuration (portaled to <body>, opens upward
- * from the bottom bar). Lists the project's watches with inline editing, a
- * "run script" button on the pattern (branch tick number), add and delete.
+ * from the bottom bar). Lists the project's watches with inline editing. A watch
+ * can filter by a static glob pattern, or by the current git branch's issue
+ * number (safe, fixed git call — no arbitrary shell).
  */
 export function WatchConfigPopup({ projectId, anchorRef, onClose, onChange }: WatchConfigPopupProps) {
   const [watches, setWatches] = useState<Watch[]>([]);
-  const [runningId, setRunningId] = useState<string | null>(null);
+  const [branchIssue, setBranchIssue] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pos, setPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
 
@@ -32,6 +29,11 @@ export function WatchConfigPopup({ projectId, anchorRef, onClose, onChange }: Wa
       setWatches(await settingsService.listProjectWatches(projectId));
     } catch (e) {
       console.error('Failed to load watches:', e);
+    }
+    try {
+      setBranchIssue(await settingsService.getBranchIssue(projectId));
+    } catch {
+      setBranchIssue(null);
     }
   }, [projectId]);
 
@@ -69,12 +71,13 @@ export function WatchConfigPopup({ projectId, anchorRef, onClose, onChange }: Wa
 
   const addWatch = async () => {
     try {
+      // New watches default to the branch-issue filter (the headline use case).
       const watch = await settingsService.addProjectWatch(projectId, {
         name: 'New watch',
         subfolder: '',
         pattern: '*',
         enabled: true,
-        script: DEFAULT_SCRIPT,
+        branch_issue: true,
       });
       setWatches((ws) => [...ws, watch]);
       onChange();
@@ -90,20 +93,6 @@ export function WatchConfigPopup({ projectId, anchorRef, onClose, onChange }: Wa
       onChange();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete watch');
-    }
-  };
-
-  const runScript = async (id: string) => {
-    setRunningId(id);
-    setError(null);
-    try {
-      const result = await settingsService.refreshWatchScript(projectId, id);
-      setWatches((ws) => ws.map((w) => (w.id === id ? { ...w, ...result } : w)));
-      onChange();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Script failed');
-    } finally {
-      setRunningId(null);
     }
   };
 
@@ -202,37 +191,39 @@ export function WatchConfigPopup({ projectId, anchorRef, onClose, onChange }: Wa
                 style={inputStyle}
               />
 
-              {/* Pattern (blob) + run-script button */}
-              <div className="flex items-center gap-1">
+              {/* Branch-issue filter toggle */}
+              <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={!!w.branch_issue}
+                  onChange={(e) => {
+                    setLocal(w.id, 'branch_issue', e.target.checked);
+                    commit(w.id, { branch_issue: e.target.checked });
+                  }}
+                  style={{ accentColor: 'var(--accent-primary)' }}
+                />
+                Filter by current branch issue #
+              </label>
+
+              {w.branch_issue ? (
+                <div
+                  className="px-2 py-1 text-xs font-mono rounded"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}
+                >
+                  {branchIssue
+                    ? <>matches <span style={{ color: 'var(--accent-primary)' }}>{branchIssue}*</span> (current branch)</>
+                    : 'No issue number in the current branch'}
+                </div>
+              ) : (
                 <input
                   value={w.pattern}
                   onChange={(e) => setLocal(w.id, 'pattern', e.target.value)}
                   onBlur={() => commit(w.id, { pattern: w.pattern })}
                   placeholder="Pattern (e.g. 277* or *.md)"
-                  className="flex-1 px-2 py-1 text-xs font-mono rounded focus:outline-none"
+                  className="w-full px-2 py-1 text-xs font-mono rounded focus:outline-none"
                   style={inputStyle}
                 />
-                <button
-                  onClick={() => runScript(w.id)}
-                  disabled={runningId === w.id}
-                  className="px-2 py-1 text-xs rounded flex items-center gap-1"
-                  style={{ color: 'var(--accent-primary)', backgroundColor: 'var(--accent-secondary)' }}
-                  title="Run script to set the pattern from the current branch"
-                >
-                  <i className={`fas fa-${runningId === w.id ? 'spinner fa-spin' : 'terminal'} text-xs`} />
-                  Branch #
-                </button>
-              </div>
-
-              {/* Script */}
-              <input
-                value={w.script || ''}
-                onChange={(e) => setLocal(w.id, 'script', e.target.value)}
-                onBlur={() => commit(w.id, { script: w.script || '' })}
-                placeholder="Script (stdout sets the pattern)"
-                className="w-full px-2 py-1 text-xs font-mono rounded focus:outline-none"
-                style={{ ...inputStyle, color: 'var(--text-secondary)' }}
-              />
+              )}
             </div>
           ))}
         </div>
