@@ -13,16 +13,8 @@ export class SettingsService {
   }
 
   async updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
-    const response = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to update settings');
-    }
-    const result = await response.json();
+    // Ported to the Rust engine (invoke replaces PUT /api/settings).
+    const result = await invoke<{ settings: AppSettings }>('update_settings', { updates: settings });
     return result.settings;
   }
 

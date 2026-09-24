@@ -56,6 +56,62 @@ pub fn get_file_type_groups() -> Value {
     crate::file_types::groups()
 }
 
+/// PUT /api/settings -> `{ success, settings }`.
+#[tauri::command]
+pub fn update_settings(updates: Value) -> Result<Value, String> {
+    let settings = store::update_settings(updates)?;
+    Ok(json!({ "success": true, "settings": settings }))
+}
+
+// --- Group / subproject CRUD (ported from the /api/groups routes) ---
+
+#[tauri::command]
+pub fn create_group(title: String) -> Result<Value, String> {
+    if title.trim().is_empty() {
+        return Err("Title is required".into());
+    }
+    let group = store::create_group(&title)?;
+    Ok(json!({ "success": true, "group": group }))
+}
+
+#[tauri::command]
+pub fn update_group(group_id: String, title: Option<String>) -> Result<Value, String> {
+    let group = store::update_group(&group_id, title.as_deref())?;
+    Ok(json!({ "success": true, "group": group }))
+}
+
+#[tauri::command]
+pub fn delete_group(group_id: String) -> Result<Value, String> {
+    store::delete_group(&group_id)?;
+    Ok(json!({ "success": true }))
+}
+
+#[tauri::command]
+pub fn create_subproject(group_id: String, data: Value) -> Result<Value, String> {
+    let path = data.get("path").and_then(|v| v.as_str()).ok_or("Path is required")?;
+    let title = data.get("title").and_then(|v| v.as_str());
+    let description = data.get("description").and_then(|v| v.as_str());
+    let project_type = data.get("type").and_then(|v| v.as_str());
+    let sp = store::create_subproject(&group_id, path, title, description, project_type)?;
+    Ok(json!({ "success": true, "subproject": sp }))
+}
+
+#[tauri::command]
+pub fn update_subproject(
+    group_id: String,
+    sub_id: String,
+    updates: Value,
+) -> Result<Value, String> {
+    let sp = store::update_subproject(&group_id, &sub_id, updates)?;
+    Ok(json!({ "success": true, "subproject": sp }))
+}
+
+#[tauri::command]
+pub fn delete_subproject(group_id: String, sub_id: String) -> Result<Value, String> {
+    store::delete_subproject(&group_id, &sub_id)?;
+    Ok(json!({ "success": true }))
+}
+
 /// GET /api/projects/:id/browse[/:subpath] -> `{ items: [...] }`.
 ///
 /// `async` + `spawn_blocking`: the directory read runs on a blocking worker
@@ -353,6 +409,21 @@ pub async fn get_favourite_files(project_id: String) -> Result<Value, String> {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         Ok(json!({ "files": items }))
+    })
+    .await
+}
+
+/// PUT /api/file/:path -> `{ success }`. Writes text content to a file that
+/// lives inside a watched project.
+#[tauri::command]
+pub async fn save_file(path: String, content: String) -> Result<Value, String> {
+    run_blocking(move || {
+        let inside = store::all_project_paths().iter().any(|p| path.starts_with(p));
+        if !inside {
+            return Err("File not in watched project".into());
+        }
+        std::fs::write(&path, content).map_err(|e| e.to_string())?;
+        Ok(json!({ "success": true }))
     })
     .await
 }

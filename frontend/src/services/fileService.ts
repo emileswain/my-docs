@@ -52,21 +52,8 @@ export class FileService {
   }
 
   async saveFile(path: string, content: string): Promise<void> {
-    const encodedPath = path.startsWith('/') ? path.substring(1) : path;
-    const response = await fetch(`/api/file/${encodedPath}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ content }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to save file');
-    }
-
-    return response.json();
+    // Ported to the Rust engine (invoke replaces PUT /api/file).
+    await invoke('save_file', { path, content });
   }
 
   async browseAllFolders(

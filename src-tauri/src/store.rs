@@ -172,6 +172,213 @@ pub fn save_notes(file_path: &str, notes: Value) -> Result<(), String> {
     std::fs::write(path, text).map_err(|e| e.to_string())
 }
 
+// --- Group / subproject CRUD (writes projects.json) ---
+
+const VALID_SUBPROJECT_TYPES: &[&str] = &[
+    "mobile", "web", "firmware", "services", "docs", "desktop", "database", "cloud",
+    "testing", "design", "workspace",
+];
+
+/// URL-friendly slug (mirrors the Python slugify).
+fn slugify(text: &str) -> String {
+    let mut s = String::new();
+    for c in text.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            s.push(c);
+        } else if c == ' ' || c == '-' {
+            s.push('-');
+        }
+    }
+    let slug = s.split('-').filter(|p| !p.is_empty()).collect::<Vec<_>>().join("-");
+    if slug.is_empty() { generate_id() } else { slug }
+}
+
+fn valid_type(t: Option<&str>) -> String {
+    match t {
+        Some(t) if VALID_SUBPROJECT_TYPES.contains(&t) => t.to_string(),
+        _ => "web".to_string(),
+    }
+}
+
+fn groups_mut(doc: &mut Value) -> &mut Vec<Value> {
+    let obj = doc.as_object_mut().expect("projects doc is an object");
+    obj.entry("groups").or_insert_with(|| json!([]));
+    obj.get_mut("groups").unwrap().as_array_mut().unwrap()
+}
+
+pub fn create_group(title: &str) -> Result<Value, String> {
+    let mut doc = load_projects();
+    let group = json!({
+        "id": generate_id(), "title": title, "slug": slugify(title), "subprojects": []
+    });
+    groups_mut(&mut doc).push(group.clone());
+    save_projects(doc)?;
+    Ok(group)
+}
+
+pub fn update_group(group_id: &str, title: Option<&str>) -> Result<Value, String> {
+    let mut doc = load_projects();
+    let updated = {
+        let mut found = None;
+        for g in groups_mut(&mut doc).iter_mut() {
+            if g.get("id").and_then(|v| v.as_str()) == Some(group_id) {
+                if let Some(t) = title {
+                    g["title"] = json!(t);
+                    g["slug"] = json!(slugify(t));
+                }
+                found = Some(g.clone());
+                break;
+            }
+        }
+        found
+    };
+    match updated {
+        Some(g) => {
+            save_projects(doc)?;
+            Ok(g)
+        }
+        None => Err("Group not found".into()),
+    }
+}
+
+pub fn delete_group(group_id: &str) -> Result<(), String> {
+    let mut doc = load_projects();
+    let groups = groups_mut(&mut doc);
+    let before = groups.len();
+    groups.retain(|g| g.get("id").and_then(|v| v.as_str()) != Some(group_id));
+    if groups.len() == before {
+        return Err("Group not found".into());
+    }
+    save_projects(doc)
+}
+
+pub fn create_subproject(
+    group_id: &str,
+    path: &str,
+    title: Option<&str>,
+    description: Option<&str>,
+    project_type: Option<&str>,
+) -> Result<Value, String> {
+    let name = std::path::Path::new(path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string());
+    let title = title.unwrap_or(&name).to_string();
+    let sp = json!({
+        "id": generate_id(),
+        "title": title,
+        "description": description.unwrap_or(""),
+        "path": path,
+        "slug": slugify(&title),
+        "type": valid_type(project_type),
+    });
+    let mut doc = load_projects();
+    let added = {
+        let mut ok = false;
+        for g in groups_mut(&mut doc).iter_mut() {
+            if g.get("id").and_then(|v| v.as_str()) == Some(group_id) {
+                if let Some(obj) = g.as_object_mut() {
+                    obj.entry("subprojects")
+                        .or_insert_with(|| json!([]))
+                        .as_array_mut()
+                        .ok_or("subprojects not array")?
+                        .push(sp.clone());
+                    ok = true;
+                }
+                break;
+            }
+        }
+        ok
+    };
+    if !added {
+        return Err("Group not found".into());
+    }
+    save_projects(doc)?;
+    Ok(sp)
+}
+
+pub fn update_subproject(group_id: &str, sub_id: &str, updates: Value) -> Result<Value, String> {
+    let mut doc = load_projects();
+    let updated = {
+        let mut found = None;
+        for g in groups_mut(&mut doc).iter_mut() {
+            if g.get("id").and_then(|v| v.as_str()) != Some(group_id) {
+                continue;
+            }
+            if let Some(subs) = g.get_mut("subprojects").and_then(|s| s.as_array_mut()) {
+                for sp in subs.iter_mut() {
+                    if sp.get("id").and_then(|v| v.as_str()) == Some(sub_id) {
+                        let u = updates.as_object().cloned().unwrap_or_default();
+                        if let Some(sobj) = sp.as_object_mut() {
+                            if let Some(t) = u.get("title").and_then(|v| v.as_str()) {
+                                sobj.insert("title".into(), json!(t));
+                                sobj.insert("slug".into(), json!(slugify(t)));
+                            }
+                            if let Some(d) = u.get("description") {
+                                sobj.insert("description".into(), d.clone());
+                            }
+                            if let Some(p) = u.get("path") {
+                                sobj.insert("path".into(), p.clone());
+                            }
+                            if let Some(ty) = u.get("type").and_then(|v| v.as_str()) {
+                                if VALID_SUBPROJECT_TYPES.contains(&ty) {
+                                    sobj.insert("type".into(), json!(ty));
+                                }
+                            }
+                        }
+                        found = Some(sp.clone());
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+        found
+    };
+    match updated {
+        Some(sp) => {
+            save_projects(doc)?;
+            Ok(sp)
+        }
+        None => Err("Group or sub-project not found".into()),
+    }
+}
+
+pub fn delete_subproject(group_id: &str, sub_id: &str) -> Result<(), String> {
+    let mut doc = load_projects();
+    let removed = {
+        let mut ok = false;
+        for g in groups_mut(&mut doc).iter_mut() {
+            if g.get("id").and_then(|v| v.as_str()) != Some(group_id) {
+                continue;
+            }
+            if let Some(subs) = g.get_mut("subprojects").and_then(|s| s.as_array_mut()) {
+                let before = subs.len();
+                subs.retain(|sp| sp.get("id").and_then(|v| v.as_str()) != Some(sub_id));
+                ok = subs.len() != before;
+            }
+            break;
+        }
+        ok
+    };
+    if !removed {
+        return Err("Group or sub-project not found".into());
+    }
+    save_projects(doc)
+}
+
+/// Merge `updates` into settings.json; returns the merged settings.
+pub fn update_settings(updates: Value) -> Result<Value, String> {
+    let mut map = load_settings_object();
+    if let Some(u) = updates.as_object() {
+        for (k, v) in u {
+            map.insert(k.clone(), v.clone());
+        }
+    }
+    save_settings_object(map)?;
+    Ok(settings())
+}
+
 /// The subproject JSON object for an id (or slug), searching all groups.
 pub fn subproject(identifier: &str) -> Option<Value> {
     for group in groups() {
