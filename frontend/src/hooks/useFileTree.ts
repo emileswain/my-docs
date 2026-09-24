@@ -61,10 +61,11 @@ export function useFileTree(projectId: string | null) {
   }, [setFileTreeCache]);
 
   /**
-   * Progressive load: paint the root + already-open folders immediately, then
-   * hydrate the full tree in the background so search works. If a cache already
-   * exists (project revisit or fs-change), just re-hydrate silently without
-   * collapsing what's shown.
+   * Progressive load: paint just the root immediately (one call), then hydrate
+   * the full tree in the background in a single browse_all — so open folders
+   * fill in without firing a browse_project per open folder (which floods IPC
+   * when many folders are open). If a cache already exists (project revisit or
+   * fs-change), just re-hydrate silently without collapsing what's shown.
    */
   const loadFileTree = useCallback(async () => {
     if (!projectId) return;
@@ -80,23 +81,12 @@ export function useFileTree(projectId: string | null) {
 
     setIsLoading(true);
     try {
-      // Initial slice: root + folders restored as open, in parallel.
-      const open = (openFolders[projectId] || []).filter((p) => p !== root);
-      const paths = [root, ...open];
-      const entries = await Promise.all(
-        paths.map(async (p) => {
-          try {
-            const { items } = await fileService.browseProject(projectId, toSubpath(root, p));
-            return [p, items] as const;
-          } catch {
-            return [p, [] as FileItem[]] as const;
-          }
-        })
-      );
-      const cache = new Map<string, FileItem[]>(entries);
+      // Initial paint: root only (one call). Background hydration fills the rest.
+      const { items } = await fileService.browseProject(projectId, '');
+      const cache = new Map<string, FileItem[]>([[root, items]]);
       setFileTreeCache(projectId, {
         cache,
-        rootItems: cache.get(root) || [],
+        rootItems: items,
         lastUpdated: Date.now(),
         hydrated: false,
       });
@@ -106,9 +96,9 @@ export function useFileTree(projectId: string | null) {
       setIsLoading(false);
     }
 
-    // Background: full hydration for search + instant expands.
+    // Background: full hydration for search + open-folder contents.
     hydrateFull(projectId);
-  }, [projectId, currentSubProject, openFolders, getCache, hydrateFull, setFileTreeCache, toSubpath]);
+  }, [projectId, currentSubProject, getCache, hydrateFull, setFileTreeCache]);
 
   // Lazy-load a single folder on expand (no-op if already cached).
   const loadFolder = useCallback(async (folderPath: string) => {

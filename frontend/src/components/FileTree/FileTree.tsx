@@ -116,6 +116,15 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     }
   };
 
+  // Always collapses every folder — an unambiguous escape from a fully-open
+  // (and slow) tree, regardless of the toggle's state.
+  const handleCollapseAll = () => {
+    if (!currentProject) return;
+    setOpenFolders([]);
+    setAllExpanded(false);
+    preSearchOpenFolders.current = null;
+  };
+
   // The open-folder set from just before a search started, so clearing the
   // filter restores what the user had open rather than collapsing everything.
   const preSearchOpenFolders = useRef<string[] | null>(null);
@@ -278,6 +287,17 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
             </svg>
           </button>
         )}
+        <button
+          onClick={handleCollapseAll}
+          className="p-1"
+          style={{ color: 'var(--text-secondary)' }}
+          title="Collapse All Folders"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 20l7-7 7 7" opacity="0.5" />
+          </svg>
+        </button>
         <button
           onClick={handleToggleExpand}
           className="p-1"
