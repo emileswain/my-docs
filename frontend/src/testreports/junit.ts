@@ -1,12 +1,10 @@
-import type { JUnitData, JUnitTestCase, JUnitTestSuite } from '../types';
+import type { TestReport, TestCase, TestSuite } from '../types';
 
 /**
- * Parse JUnit XML into structured test-result data, entirely in the browser
- * (DOMParser). Ported from the Python parse_junit_xml — the file viewer already
- * has the raw content, so no backend round-trip is needed. Returns null when the
- * XML is not a JUnit testsuites/testsuite document.
+ * Parse JUnit XML into the canonical TestReport (DOMParser, in the browser).
+ * Returns null when the content is not a JUnit testsuites/testsuite document.
  */
-export function parseJUnitXml(content: string): JUnitData | null {
+export function parseJUnitXml(content: string): TestReport | null {
   if (!content.trim()) return null;
 
   let root: Element | null;
@@ -32,7 +30,7 @@ export function parseJUnitXml(content: string): JUnitData | null {
   const flt = (el: Element, attr: string) => parseFloat(el.getAttribute(attr) || '0') || 0;
 
   let totalTests = 0, totalFailures = 0, totalErrors = 0, totalSkipped = 0, totalTime = 0;
-  const testsuites: JUnitTestSuite[] = [];
+  const testsuites: TestSuite[] = [];
 
   for (const suiteEl of suiteElements) {
     const suiteTests = num(suiteEl, 'tests');
@@ -47,13 +45,13 @@ export function parseJUnitXml(content: string): JUnitData | null {
     totalSkipped += suiteSkipped;
     totalTime += suiteTime;
 
-    const testcases: JUnitTestCase[] = [];
+    const testcases: TestCase[] = [];
     for (const tcEl of Array.from(suiteEl.children).filter((c) => c.tagName === 'testcase')) {
       const failureEl = tcEl.querySelector(':scope > failure');
       const errorEl = tcEl.querySelector(':scope > error');
       const skippedEl = tcEl.querySelector(':scope > skipped');
 
-      let status: JUnitTestCase['status'] = 'passed';
+      let status: TestCase['status'] = 'passed';
       let failureMessage: string | undefined;
       let failureText: string | undefined;
 
@@ -71,7 +69,7 @@ export function parseJUnitXml(content: string): JUnitData | null {
         failureText = '';
       }
 
-      const tc: JUnitTestCase = {
+      const tc: TestCase = {
         name: tcEl.getAttribute('name') || 'unnamed',
         time: flt(tcEl, 'time'),
         status,
@@ -107,6 +105,7 @@ export function parseJUnitXml(content: string): JUnitData | null {
   }
 
   return {
+    format: 'junit',
     summary: {
       tests: totalTests,
       passed: totalTests - totalFailures - totalErrors - totalSkipped,

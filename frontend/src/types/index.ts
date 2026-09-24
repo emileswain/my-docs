@@ -78,29 +78,37 @@ export interface FileContent {
   junit?: JUnitData;
 }
 
-export interface JUnitTestCase {
+// --- Canonical test-report model ---
+// Both JUnit XML and Dart test JSON parse into this shape, so a single viewer
+// can render either. Add new formats by writing a parser that returns TestReport.
+
+export type TestStatus = 'passed' | 'failed' | 'errored' | 'skipped';
+
+export interface TestCase {
   name: string;
   classname?: string;
   app_path?: string;
   time?: number;
-  status: 'passed' | 'failed' | 'errored' | 'skipped';
+  status: TestStatus;
   failure_message?: string;
   failure_text?: string;
   system_out?: string;
   file?: string;
 }
 
-export interface JUnitTestSuite {
+export interface TestSuite {
   name: string;
   tests: number;
   failures: number;
   errors: number;
   skipped: number;
   time: number;
-  testcases: JUnitTestCase[];
+  testcases: TestCase[];
 }
 
-export interface JUnitData {
+export interface TestReport {
+  /** Which source format produced this report (for labelling). */
+  format?: 'junit' | 'dart';
   summary: {
     tests: number;
     passed: number;
@@ -109,8 +117,15 @@ export interface JUnitData {
     skipped: number;
     time: number;
   };
-  testsuites: JUnitTestSuite[];
+  testsuites: TestSuite[];
 }
+
+/** @deprecated use TestCase / TestSuite / TestReport */
+export type JUnitTestCase = TestCase;
+/** @deprecated */
+export type JUnitTestSuite = TestSuite;
+/** @deprecated */
+export type JUnitData = TestReport;
 
 export interface BrowseResponse {
   project: Project;

@@ -8,7 +8,7 @@ interface FileViewerHeaderProps {
   isSaving?: boolean;
   onSave?: () => void;
   canEdit?: boolean;
-  isJunit?: boolean;
+  isTestReport?: boolean;
   notesVisible?: boolean;
   onToggleNotes?: () => void;
 }
@@ -23,7 +23,7 @@ export function FileViewerHeader({
   isSaving,
   onSave,
   canEdit = false,
-  isJunit = false,
+  isTestReport = false,
   notesVisible = false,
   onToggleNotes,
 }: FileViewerHeaderProps) {
@@ -104,8 +104,8 @@ export function FileViewerHeader({
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
             >
-              <i className={`fas fa-${isJunit ? (showRaw ? 'chart-bar' : 'code') : (showRaw ? (canEdit ? 'times' : 'eye') : (canEdit ? 'edit' : 'code'))} mr-1`}></i>
-              {isJunit ? (showRaw ? 'Show Results' : 'Show XML') : (showRaw ? (canEdit ? 'Cancel' : 'Show Rendered') : (canEdit ? 'Edit' : 'Show Raw'))}
+              <i className={`fas fa-${isTestReport ? (showRaw ? 'chart-bar' : 'code') : (showRaw ? (canEdit ? 'times' : 'eye') : (canEdit ? 'edit' : 'code'))} mr-1`}></i>
+              {isTestReport ? (showRaw ? 'Show Results' : 'Show Source') : (showRaw ? (canEdit ? 'Cancel' : 'Show Rendered') : (canEdit ? 'Edit' : 'Show Raw'))}
             </button>
           )}
         </div>

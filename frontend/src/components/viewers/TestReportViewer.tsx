@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
-import type { JUnitData, JUnitTestCase, JUnitTestSuite } from '../../types';
+import type { TestReport, JUnitTestCase, JUnitTestSuite } from '../../types';
 
 type StatusFilter = 'all' | 'failed' | 'passed' | 'errored' | 'skipped';
 type SortMode = 'status' | 'name' | 'duration' | 'default';
 type GroupMode = 'none' | 'classname' | 'status';
 
-interface JUnitViewerProps {
-  junit: JUnitData;
+interface TestReportViewerProps {
+  report: TestReport;
 }
 
 const STATUS_ORDER: Record<string, number> = {
@@ -375,8 +375,8 @@ function SuiteSection({
   );
 }
 
-export function JUnitViewer({ junit }: JUnitViewerProps) {
-  const { summary } = junit;
+export function TestReportViewer({ report }: TestReportViewerProps) {
+  const { summary } = report;
   const hasFailures = summary.failures > 0 || summary.errors > 0;
 
   // Default: sort by status (failures first), filter to broken if there are failures
@@ -393,7 +393,7 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
 
   const filterCounts = useMemo(() => {
     const counts: Record<StatusFilter, number> = { all: 0, passed: 0, failed: 0, errored: 0, skipped: 0 };
-    for (const suite of junit.testsuites) {
+    for (const suite of report.testsuites) {
       for (const tc of suite.testcases) {
         counts.all++;
         counts[tc.status]++;
@@ -402,7 +402,7 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
     // Merge errored into failed count for the "Broken" filter
     counts.failed += counts.errored;
     return counts;
-  }, [junit]);
+  }, [report]);
 
   return (
     <div>
@@ -539,7 +539,7 @@ export function JUnitViewer({ junit }: JUnitViewerProps) {
       </div>
 
       {/* Test suites */}
-      {junit.testsuites.map((suite, si) => (
+      {report.testsuites.map((suite, si) => (
         <SuiteSection
           key={si}
           suite={suite}

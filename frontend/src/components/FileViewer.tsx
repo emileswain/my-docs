@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
-import { parseJUnitXml } from '../utils/junit';
+import { detectTestReport } from '../testreports';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
 import { FileViewerHeader } from './FileViewerHeader';
@@ -9,7 +9,7 @@ import { YamlViewer } from './viewers/YamlViewer';
 import { MermaidViewer } from './viewers/MermaidViewer';
 import { MermaidModal } from './viewers/MermaidModal';
 import { XmlViewer } from './viewers/XmlViewer';
-import { JUnitViewer } from './viewers/JUnitViewer';
+import { TestReportViewer } from './viewers/TestReportViewer';
 import { RawViewer } from './viewers/RawViewer';
 import { EditableRawViewer, type EditableRawViewerRef } from './viewers/EditableRawViewer';
 import { useScrollPosition } from '../hooks/useScrollPosition';
@@ -60,13 +60,17 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
   const isYaml = extension === '.yml' || extension === '.yaml';
   const isMermaid = extension === '.mmd';
   const isXml = extension === '.xml';
-  // Parse JUnit XML in the browser (the backend just returns raw content now).
-  const junit = useMemo(
-    () => (isXml ? parseJUnitXml(currentFileContent?.content ?? '') : null),
-    [isXml, currentFileContent?.content]
+  // Detect a test report (JUnit XML or Dart test JSON) from the raw content, in
+  // the browser. The parser registry picks the right format by extension.
+  const report = useMemo(
+    () =>
+      extension === '.xml' || extension === '.json'
+        ? detectTestReport(currentFileContent?.content ?? '', extension)
+        : null,
+    [extension, currentFileContent?.content]
   );
-  const isJunit = isXml && !!junit;
-  const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid || isXml;
+  const isTestReport = !!report;
+  const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid || isXml || isTestReport;
   const canEdit = isMarkdown || isJson || isYaml;
 
   useEffect(() => {
@@ -111,8 +115,11 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
     if (!currentFileContent) return null;
 
     if (showRaw) {
-      if (isJunit) {
-        return <XmlViewer content={currentFileContent.content} />;
+      if (isTestReport) {
+        // Raw source: XML as XML, the Dart JSON stream as plain text.
+        return isXml
+          ? <XmlViewer content={currentFileContent.content} />
+          : <RawViewer content={currentFileContent.content} />;
       }
       if (canEdit && currentFile) {
         return (
@@ -126,6 +133,11 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
         );
       }
       return <RawViewer content={currentFileContent.content} />;
+    }
+
+    // Test reports (JUnit XML / Dart JSON) take priority over the plain viewers.
+    if (isTestReport) {
+      return <TestReportViewer report={report!} />;
     }
 
     if (isMarkdown && currentFileContent.html) {
@@ -160,9 +172,6 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
     }
 
     if (isXml) {
-      if (isJunit) {
-        return <JUnitViewer junit={junit!} />;
-      }
       return <XmlViewer content={currentFileContent.content} />;
     }
 
@@ -184,7 +193,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
         isSaving={isSaving}
         onSave={handleSaveClick}
         canEdit={canEdit}
-        isJunit={isJunit}
+        isTestReport={isTestReport}
         notesVisible={notesPanelVisible}
         onToggleNotes={() => setNotesPanelVisible(!notesPanelVisible)}
       />
