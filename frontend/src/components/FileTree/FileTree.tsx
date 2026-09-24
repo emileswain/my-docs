@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useAppStore } from '../../store/useAppStore';
 import { useFileTree } from '../../hooks/useFileTree';
@@ -116,18 +117,27 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
     }
   };
 
+  // The open-folder set from just before a search started, so clearing the
+  // filter restores what the user had open rather than collapsing everything.
+  const preSearchOpenFolders = useRef<string[] | null>(null);
+
   // Always collapses every folder — an unambiguous escape from a fully-open
   // (and slow) tree, regardless of the toggle's state.
-  const handleCollapseAll = () => {
+  const handleCollapseAll = useCallback(() => {
     if (!currentProject) return;
     setOpenFolders([]);
     setAllExpanded(false);
     preSearchOpenFolders.current = null;
-  };
+  }, [currentProject, setOpenFolders]);
 
-  // The open-folder set from just before a search started, so clearing the
-  // filter restores what the user had open rather than collapsing everything.
-  const preSearchOpenFolders = useRef<string[] | null>(null);
+  // Native menu: View -> Collapse All Folders emits this event.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen('collapse-all-folders', () => handleCollapseAll())
+      .then((fn) => { unlisten = fn; })
+      .catch(() => {});
+    return () => unlisten?.();
+  }, [handleCollapseAll]);
 
   const restorePreSearchFolders = useCallback(() => {
     setOpenFolders(preSearchOpenFolders.current ?? []);

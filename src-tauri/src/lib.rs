@@ -129,6 +129,9 @@ pub fn run() {
                     let _ = w.set_focus();
                 }
             }
+            menu::COLLAPSE_ALL => {
+                let _ = app.emit("collapse-all-folders", ());
+            }
             _ => {}
         })
         .on_window_event(|window, event| {
