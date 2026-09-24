@@ -19,6 +19,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
   const [allExpanded, setAllExpanded] = useState(false);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
   const typeFilterActive = useFileFilterStore((s) => s.disabled.length > 0);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const currentProject = useProjectStore((state) => state.currentProject);
   const currentFile = useProjectStore((state) => state.currentFile);
@@ -302,6 +303,7 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
           </button>
         )}
         <button
+          ref={filterButtonRef}
           onClick={() => setShowTypeFilter((v) => !v)}
           className="p-1"
           style={{ color: typeFilterActive ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
@@ -312,10 +314,10 @@ export function FileTree({ onFileSelect }: FileTreeProps) {
           </svg>
         </button>
         {showTypeFilter && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowTypeFilter(false)} />
-            <FileTypeFilterPopup onClose={() => setShowTypeFilter(false)} />
-          </>
+          <FileTypeFilterPopup
+            anchorRef={filterButtonRef}
+            onClose={() => setShowTypeFilter(false)}
+          />
         )}
         <button
           onClick={handleCollapseAll}
