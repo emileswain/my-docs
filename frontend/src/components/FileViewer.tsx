@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { parseJUnitXml } from '../utils/junit';
 import { useProjectStore } from '../store/useProjectStore';
 import { useAppStore } from '../store/useAppStore';
 import { FileViewerHeader } from './FileViewerHeader';
@@ -59,7 +60,12 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
   const isYaml = extension === '.yml' || extension === '.yaml';
   const isMermaid = extension === '.mmd';
   const isXml = extension === '.xml';
-  const isJunit = isXml && !!currentFileContent?.junit;
+  // Parse JUnit XML in the browser (the backend just returns raw content now).
+  const junit = useMemo(
+    () => (isXml ? parseJUnitXml(currentFileContent?.content ?? '') : null),
+    [isXml, currentFileContent?.content]
+  );
+  const isJunit = isXml && !!junit;
   const canToggleRaw = isMarkdown || isJson || isYaml || isMermaid || isXml;
   const canEdit = isMarkdown || isJson || isYaml;
 
@@ -155,7 +161,7 @@ export function FileViewer({ contentAreaRef, onHistoryLoad, onNavigate }: FileVi
 
     if (isXml) {
       if (isJunit) {
-        return <JUnitViewer junit={currentFileContent.junit!} />;
+        return <JUnitViewer junit={junit!} />;
       }
       return <XmlViewer content={currentFileContent.content} />;
     }
